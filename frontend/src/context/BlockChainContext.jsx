@@ -7,9 +7,9 @@ import GuardianAbi from "../abis/GuardianAbi.json";
 
 // Updated contract addresses - CHANGE THE MEDVAULT ADDRESS AFTER REDEPLOYMENT
 const CONTRACT_ADDRESSES = {
-  healthID: "0xE5CD1EC56eBdb94AcFe3142Ac7902424B05b5EE5",
-  medVault: "0xcA187608A6009611B0Ff35D41416D330EA31BA12", // ⚠️ UPDATE THIS AFTER REDEPLOY
-  guardian: "0xA8FD9DaD89DB3B874A79ED4C18a4d7776478c468"
+  healthID: import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS,
+  medVault: import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS,
+  guardian: import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS
 };
 
 // Create the context

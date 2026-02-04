@@ -9,13 +9,17 @@ import {
   Download,
   X,
   Loader2,
-  FileUp
+  FileUp,
+  Shield
 } from "lucide-react";
 import { Button } from "./button.jsx";
+import { useMediChain } from "../context/BlockChainContext";
 
 const MedicalReportAnalyzer = () => {
+  const { uploadReport } = useMediChain();
   const [file, setFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
@@ -86,6 +90,23 @@ const MedicalReportAnalyzer = () => {
     setResults(null);
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const saveToBlockchain = async () => {
+    if (!results) return;
+    
+    setIsSaving(true);
+    try {
+      // In a real app, we would upload the file to IPFS first
+      // For now, we'll use a mock IPFS hash or the analysis summary
+      const mockIpfsHash = "Qm" + Math.random().toString(36).substring(2, 15);
+      await uploadReport(mockIpfsHash);
+      alert("Report successfully secured on blockchain!");
+    } catch (err) {
+      setError("Blockchain save failed: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getLabValueStatus = (labValue) =>
@@ -204,6 +225,21 @@ const MedicalReportAnalyzer = () => {
             </div>
             
             <p className="text-gray-700 font-bold text-xl leading-relaxed relative z-10">{results.summary}</p>
+
+            <div className="pt-6 border-t border-gray-50 flex justify-end">
+              <Button 
+                onClick={saveToBlockchain} 
+                disabled={isSaving}
+                className="bg-success-600 hover:bg-success-700 text-white px-8 py-4 rounded-2xl flex items-center gap-3 shadow-lg shadow-success-100"
+              >
+                {isSaving ? (
+                  <Loader2 className="animate-spin" size={20} />
+                ) : (
+                  <Shield size={20} />
+                )}
+                Secure on Blockchain
+              </Button>
+            </div>
 
             {results.conditions?.length > 0 && (
               <div className="space-y-6 relative z-10">

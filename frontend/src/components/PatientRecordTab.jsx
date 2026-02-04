@@ -33,10 +33,8 @@ const PatientRecordsTab = () => {
   const [healthIDContract, setHealthIDContract] = useState(null);
   const [account, setAccount] = useState(null);
 
-  const MEDVAULT_CONTRACT_ADDRESS =
-    '0xcA187608A6009611B0Ff35D41416D330EA31BA12';
-  const HEALTHID_CONTRACT_ADDRESS =
-    '0xE5CD1EC56eBdb94AcFe3142Ac7902424B05b5EE5';
+  const MEDVAULT_CONTRACT_ADDRESS = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
+  const HEALTHID_CONTRACT_ADDRESS = import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS;
 
   useEffect(() => {
     const initializeBlockchain = async () => {

@@ -28,7 +28,7 @@ export const AccessRequestsPanel = () => {
   const [account, setAccount] = useState(null);
 
   const token = localStorage.getItem('token');
-  const CONTRACT_ADDRESS = "0xcA187608A6009611B0Ff35D41416D330EA31BA12";
+  const CONTRACT_ADDRESS = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
 
   useEffect(() => {
     const initializeContract = async () => {
@@ -102,9 +102,10 @@ export const AccessRequestsPanel = () => {
         setError(null);
 
         const currentBlock = await provider.getBlockNumber();
-        const fromBlock = Math.max(0, currentBlock - 10000);
+        // Query from a much earlier block to ensure we don't miss requests
+        const fromBlock = Math.max(0, currentBlock - 50000); 
 
-        console.log(`Querying events from block ${fromBlock} to ${currentBlock}`);
+        console.log(`Querying events from block ${fromBlock} to ${currentBlock} for account ${account}`);
 
         const filter = contract.filters.AccessRequested(null, account);
         const events = await contract.queryFilter(filter, fromBlock, currentBlock);
@@ -120,7 +121,8 @@ export const AccessRequestsPanel = () => {
         const doctorRequestMap = new Map();
 
         events.forEach(event => {
-          const doctorAddress = event.args[0];
+          // In ethers v6, args can be accessed by name or index
+          const doctorAddress = event.args.doctor || event.args[0];
           const blockNumber = event.blockNumber;
 
           if (!doctorRequestMap.has(doctorAddress) ||
@@ -139,9 +141,10 @@ export const AccessRequestsPanel = () => {
         for (const [doctorAddress, requestInfo] of doctorRequestMap) {
           try {
             const hasAccess = await contract.doctorPermissions(account, doctorAddress);
+            const isPending = await contract.pendingAccessRequests(account, doctorAddress);
 
-            if (hasAccess) {
-              console.log(`Doctor ${doctorAddress} already has access, skipping`);
+            if (hasAccess || !isPending) {
+              console.log(`Doctor ${doctorAddress} access status: hasAccess=${hasAccess}, isPending=${isPending}. Skipping.`);
               continue;
             }
 

@@ -13,7 +13,7 @@ const rawAbi = JSON.parse(fs.readFileSync(healthIdAbiPath, 'utf8'));
 const HealthIDAbi = Array.isArray(rawAbi) ? rawAbi : rawAbi.abi; // ensure it's ABI array
 
 // Contract address from deployment
-const HEALTH_ID_CONTRACT_ADDRESS = "0xE5CD1EC56eBdb94AcFe3142Ac7902424B05b5EE5";
+const HEALTH_ID_CONTRACT_ADDRESS = process.env.HEALTH_ID_CONTRACT_ADDRESS;
 
 // Create a provider and wallet using the owner's private key
 const setupProvider = () => {

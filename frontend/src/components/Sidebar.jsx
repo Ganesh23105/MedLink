@@ -6,6 +6,7 @@ export const Sidebar = ({ activeTab, setActiveTab }) => {
     { id: 'patients', label: 'Patients', icon: '👥' },
     { id: 'requests', label: 'Access Requests', icon: '🔑' },
     { id: 'appointments', label: 'Appointments', icon: '📅' },
+    { id: 'prescription', label: 'Prescription', icon: '📝' },
     { id: 'profile', label: 'Profile', icon: '👤' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];

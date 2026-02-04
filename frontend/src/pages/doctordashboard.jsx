@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AccessRequestsPanel } from '../components/AccessRequest';
 import { ProfileForm } from '../components/ProfileForm';
+import PrescriptionGenerator from '../components/PrescriptionGenerator';
 import { Sidebar } from '../components/Sidebar';
 import Header from '../components/DocHeader';
 import { PatientsTab } from '../components/PatientTab';
@@ -177,6 +178,8 @@ const DoctorDashboard = () => {
         return <AccessRequestsPanel />;
       case 'appointments':
         return <AppointmentsPanel />;
+      case 'prescription':
+        return <PrescriptionGenerator />;
       case 'profile':
         return <ProfileForm />;
       case 'settings':
