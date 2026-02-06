@@ -100,12 +100,10 @@ const DashboardTab = ({ wearableData }) => {
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">HealthID</p>
               {healthIdInfo.loading ? (
                 <div className="h-5 w-24 bg-gray-100 animate-pulse rounded-full"></div>
-              ) : healthIdInfo.error ? (
-                <p className="text-xs font-black text-danger-500 uppercase tracking-widest">Network Err</p>
-              ) : healthIdInfo.hasHealthID || userHealthID ? (
+              ) : (healthIdInfo.hasHealthID || userHealthID) ? (
                 <p className="text-sm font-black text-primary-600 tracking-widest">#{healthIdInfo.tokenId || userHealthID}</p>
               ) : (
-                <p className="text-xs font-black text-warning-500 uppercase tracking-widest">Pending Mint</p>
+                <p className="text-xs font-black text-warning-500 uppercase tracking-widest">Not Assigned</p>
               )}
             </div>
           </div>

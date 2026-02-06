@@ -7,9 +7,9 @@ import GuardianAbi from "../abis/GuardianAbi.json";
 
 // Updated contract addresses - CHANGE THE MEDVAULT ADDRESS AFTER REDEPLOYMENT
 const CONTRACT_ADDRESSES = {
-  healthID: import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS,
-  medVault: import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS,
-  guardian: import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS
+  healthID: import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS || "0x840Af108761519EE0fA15C56621B877837512452",
+  medVault: import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS || "0x652c5Ae2b16B0717F5B0D2f95C9eA2ad2D96b973",
+  guardian: import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS || "0x317809481694FA03014b511657bFFFFf7157dBf3"
 };
 
 // Create the context
@@ -395,7 +395,7 @@ export const MediChainProvider = ({ children }) => {
           // Check if address has a HealthID
           const balance = await healthID.balanceOf(address);
 
-          if (balance > 0) {
+          if (balance > 0n) {
             // Get the tokenId
             const tokenId = await healthID.addressToTokenId(address);
 

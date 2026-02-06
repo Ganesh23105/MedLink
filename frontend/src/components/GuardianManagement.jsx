@@ -15,13 +15,50 @@ const GuardianManagement = () => {
   const [error, setError] = useState("");
 
   const [patientAddress, setPatientAddress] = useState("");
-  const [isGuardianForPatient, setIsGuardianForPatient] = useState(true); // Default to true to show the button
+  const [isGuardianForPatient, setIsGuardianForPatient] = useState(false);
   const [requestStatus, setRequestStatus] = useState(null);
   const [emergencyActive, setEmergencyActive] = useState(false);
 
   const [guardianContract, setGuardianContract] = useState(null);
   const [medVaultContract, setMedVaultContract] = useState(null);
   const [contractInitialized, setContractInitialized] = useState(false);
+
+  // Helper function to safely parse contract results
+  const parseContractResult = (result, expectedType = "array") => {
+    try {
+      if (!result) return expectedType === "array" ? [] : null;
+
+      // Handle ethers Result objects
+      if (result._isIndexed !== undefined || result.toArray) {
+        return result.toArray ? result.toArray() : Array.from(result);
+      }
+
+      // Handle regular arrays
+      if (Array.isArray(result)) {
+        return result;
+      }
+
+      // Handle single values
+      if (expectedType === "boolean") {
+        return Boolean(result);
+      }
+
+      // Try to convert to array if expected
+      if (expectedType === "array") {
+        try {
+          return Array.from(result);
+        } catch (e) {
+          console.warn("Could not convert result to array:", result);
+          return [];
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error parsing contract result:", error);
+      return expectedType === "array" ? [] : null;
+    }
+  };
 
   useEffect(() => {
     const initContracts = async () => {
@@ -33,8 +70,8 @@ const GuardianManagement = () => {
       try {
         const signer = await provider.getSigner();
         
-        const guardianAddress = import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS;
-        const medVaultAddress = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
+        const guardianAddress = import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS || "0x317809481694FA03014b511657bFFFFf7157dBf3";
+        const medVaultAddress = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS || "0x652c5Ae2b16B0717F5B0D2f95C9eA2ad2D96b973";
 
         if (!guardianAddress || !medVaultAddress) {
           setError("Contract addresses not configured");
@@ -53,9 +90,10 @@ const GuardianManagement = () => {
           signer
         );
 
-        // Verify connection by calling a view function
+        // Verify connection and load initial data
         try {
-          await guardian.getGuardians(account);
+          const currentGuardians = await guardian.getGuardians(account);
+          setGuardians(parseContractResult(currentGuardians));
         } catch (e) {
           console.warn("Could not fetch guardians, might be new account");
         }
@@ -119,7 +157,7 @@ const GuardianManagement = () => {
   };
 
   const checkGuardianStatus = async () => {
-    if (!guardianContract || !ethers.isAddress(patientAddress)) {
+    if (!guardianContract || !medVaultContract || !ethers.isAddress(patientAddress)) {
       setError("Invalid patient address");
       return;
     }
@@ -127,7 +165,8 @@ const GuardianManagement = () => {
     try {
       setLoading(true);
       const guardiansList = await guardianContract.getGuardians(patientAddress);
-      const isGuardian = guardiansList.some(g => g.toLowerCase() === account.toLowerCase());
+      const parsedGuardians = parseContractResult(guardiansList);
+      const isGuardian = parsedGuardians.some(g => g.toLowerCase() === account.toLowerCase());
       setIsGuardianForPatient(isGuardian);
       
       const status = await guardianContract.getRequestStatus(patientAddress);
@@ -277,8 +316,8 @@ const GuardianManagement = () => {
                 {guardians.map((guardian, index) => (
                   <div key={index} className="flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-gray-100 group hover:bg-white hover:shadow-2xl hover:border-primary-100 transition-all duration-500">
                     <div className="flex items-center gap-5 overflow-hidden">
-                      <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-xs font-black text-primary-500 shadow-sm group-hover:bg-primary-600 group-hover:text-white transition-all duration-300">
-                        {index + 1}
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-lg shadow-sm group-hover:rotate-6 transition-transform">
+                        👤
                       </div>
                       <span className="text-sm font-black text-gray-700 truncate tracking-tighter">{guardian}</span>
                     </div>

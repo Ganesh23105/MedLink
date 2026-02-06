@@ -13,7 +13,7 @@ const rawAbi = JSON.parse(fs.readFileSync(healthIdAbiPath, 'utf8'));
 const HealthIDAbi = Array.isArray(rawAbi) ? rawAbi : rawAbi.abi; // ensure it's ABI array
 
 // Contract address from deployment
-const HEALTH_ID_CONTRACT_ADDRESS = process.env.HEALTH_ID_CONTRACT_ADDRESS;
+const HEALTH_ID_CONTRACT_ADDRESS = process.env.HEALTH_ID_CONTRACT_ADDRESS || "0x840Af108761519EE0fA15C56621B877837512452";
 
 // Create a provider and wallet using the owner's private key
 const setupProvider = () => {
@@ -43,7 +43,7 @@ export const mintHealthID = async (req, res) => {
     // Check if user already has a HealthID
     const balance = await healthIDContract.balanceOf(walletAddress);
 
-    if (balance > 0) {
+    if (balance > 0n) {
       const tokenId = await healthIDContract.addressToTokenId(walletAddress);
       return res.status(200).json({
         message: 'User already has a HealthID',
@@ -92,7 +92,7 @@ export const checkHealthID = async (req, res) => {
 
     const balance = await healthIDContract.balanceOf(walletAddress);
 
-    if (balance > 0) {
+    if (balance > 0n) {
       const tokenId = await healthIDContract.addressToTokenId(walletAddress);
       return res.status(200).json({
         hasHealthID: true,
