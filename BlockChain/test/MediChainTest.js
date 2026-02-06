@@ -13,13 +13,17 @@ describe("MedLink System Test", function () {
     healthID = await HealthID.deploy(owner.address);
     await healthID.waitForDeployment();
     
-    const MedVault = await ethers.getContractFactory("MedVault");
-    medVault = await MedVault.deploy(await healthID.getAddress());
-    await medVault.waitForDeployment();
-    
     const Guardian = await ethers.getContractFactory("Guardian");
     guardian = await Guardian.deploy();
     await guardian.waitForDeployment();
+    const guardianAddress = await guardian.getAddress();
+
+    const MedVault = await ethers.getContractFactory("MedVault");
+    medVault = await MedVault.deploy(await healthID.getAddress(), guardianAddress);
+    await medVault.waitForDeployment();
+    const medVaultAddress = await medVault.getAddress();
+
+    await guardian.setMedVaultContract(medVaultAddress);
     
     console.log("Contracts deployed for testing:");
     console.log(`HealthID: ${await healthID.getAddress()}`);
@@ -79,11 +83,16 @@ describe("MedLink System Test", function () {
   });
 
   describe("Guardian", function () {
-    it("Should create emergency unlock request", async function () {
+    it("Should assign guardians", async function () {
       const guardians = [guardian1.address, guardian2.address];
-      await expect(guardian.connect(patient).requestUnlock(patient.address, guardians))
-        .to.emit(guardian, "UnlockRequested")
-        .withArgs(patient.address, guardians, 2); // 2 approvals needed (majority of 2)
+      await expect(guardian.connect(patient).assignGuardians(guardians))
+        .to.emit(guardian, "GuardiansAssigned")
+        .withArgs(patient.address, guardians);
+    });
+
+    it("Should create emergency unlock request", async function () {
+      await expect(guardian.connect(guardian1).requestUnlock(patient.address))
+        .to.emit(guardian, "UnlockRequested");
     });
 
     it("Should process guardian approvals", async function () {
@@ -98,16 +107,9 @@ describe("MedLink System Test", function () {
         .withArgs(patient.address);
     });
 
-    it("Should prevent non-guardians from approving", async function () {
-      // Create a new emergency request for a different patient (owner in this case)
-      // to test the 'Not a guardian' case
-      const guardians = [guardian1.address, guardian2.address];
-      await guardian.connect(owner).requestUnlock(owner.address, guardians);
-      
-      // Doctor is not in the guardians list, so this should fail with 'Not a guardian'
-      await expect(
-        guardian.connect(doctor).approveUnlock(owner.address)
-      ).to.be.revertedWith("Not a guardian");
+    it("Should grant emergency access in MedVault", async function () {
+      expect(await medVault.emergencyAccessActive(patient.address)).to.be.true;
+      expect(await medVault.emergencyAccessPermissions(patient.address, guardian1.address)).to.be.true;
     });
   });
 

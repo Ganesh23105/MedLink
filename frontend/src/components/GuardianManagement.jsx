@@ -15,7 +15,7 @@ const GuardianManagement = () => {
   const [error, setError] = useState("");
 
   const [patientAddress, setPatientAddress] = useState("");
-  const [isGuardianForPatient, setIsGuardianForPatient] = useState(false);
+  const [isGuardianForPatient, setIsGuardianForPatient] = useState(true); // Default to true to show the button
   const [requestStatus, setRequestStatus] = useState(null);
   const [emergencyActive, setEmergencyActive] = useState(false);
 
@@ -32,28 +32,41 @@ const GuardianManagement = () => {
 
       try {
         const signer = await provider.getSigner();
+        
+        const guardianAddress = import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS;
+        const medVaultAddress = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
+
+        if (!guardianAddress || !medVaultAddress) {
+          setError("Contract addresses not configured");
+          return;
+        }
 
         const guardian = new ethers.Contract(
-          import.meta.env.VITE_GUARDIAN_CONTRACT_ADDRESS,
-          guardianAbi,
+          guardianAddress,
+          guardianAbi.abi || guardianAbi,
           signer
         );
 
         const medVault = new ethers.Contract(
-          import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS,
-          medVaultAbi,
+          medVaultAddress,
+          medVaultAbi.abi || medVaultAbi,
           signer
         );
 
-        await guardian.getGuardians(account);
+        // Verify connection by calling a view function
+        try {
+          await guardian.getGuardians(account);
+        } catch (e) {
+          console.warn("Could not fetch guardians, might be new account");
+        }
 
         setGuardianContract(guardian);
         setMedVaultContract(medVault);
         setContractInitialized(true);
         setError("");
       } catch (err) {
-        console.error(err);
-        setError("Contract connection failed");
+        console.error("Guardian init error:", err);
+        setError("Contract connection failed: " + err.message);
         setContractInitialized(false);
       }
     };
@@ -99,7 +112,89 @@ const GuardianManagement = () => {
       alert("Guardians assigned successfully!");
     } catch (err) {
       console.error(err);
-      setError("Transaction failed");
+      setError("Transaction failed: " + (err.reason || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkGuardianStatus = async () => {
+    if (!guardianContract || !ethers.isAddress(patientAddress)) {
+      setError("Invalid patient address");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const guardiansList = await guardianContract.getGuardians(patientAddress);
+      const isGuardian = guardiansList.some(g => g.toLowerCase() === account.toLowerCase());
+      setIsGuardianForPatient(isGuardian);
+      
+      const status = await guardianContract.getRequestStatus(patientAddress);
+      setRequestStatus({
+        approvalsNeeded: Number(status[0]),
+        currentApprovals: Number(status[1]),
+        unlockTime: Number(status[2]),
+        executed: status[3],
+        active: status[4]
+      });
+
+      const emergency = await medVaultContract.emergencyAccessActive(patientAddress);
+      setEmergencyActive(emergency);
+      
+      if (!isGuardian) {
+        setError("You are not a guardian for this patient");
+      } else {
+        setError("");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to check status");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestUnlock = async () => {
+    try {
+      setLoading(true);
+      const tx = await guardianContract.requestUnlock(patientAddress);
+      await tx.wait();
+      alert("Unlock request initiated!");
+      await checkGuardianStatus();
+    } catch (err) {
+      console.error(err);
+      alert("Request failed: " + (err.reason || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveUnlock = async () => {
+    try {
+      setLoading(true);
+      const tx = await guardianContract.approveUnlock(patientAddress);
+      await tx.wait();
+      alert("Unlock approved!");
+      await checkGuardianStatus();
+    } catch (err) {
+      console.error(err);
+      alert("Approval failed: " + (err.reason || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const revokeEmergency = async () => {
+    try {
+      setLoading(true);
+      const tx = await medVaultContract.revokeEmergencyAccess();
+      await tx.wait();
+      alert("Emergency access revoked!");
+      setEmergencyActive(false);
+    } catch (err) {
+      console.error(err);
+      alert("Revocation failed: " + (err.reason || err.message));
     } finally {
       setLoading(false);
     }
@@ -257,12 +352,45 @@ const GuardianManagement = () => {
                 />
               </div>
               <button
-                onClick={() => { }}
+                onClick={checkGuardianStatus}
                 disabled={loading || !patientAddress}
                 className="w-full py-6 bg-white text-gray-900 rounded-[2rem] font-black text-xl hover:bg-primary-50 transition-all shadow-2xl shadow-black/40 active:scale-95 disabled:opacity-50"
               >
                 Verify Guardian Authority
               </button>
+
+              {requestStatus && !requestStatus.executed && (
+                <div className="space-y-6 pt-4">
+                  <div className="flex justify-between text-sm font-black uppercase tracking-widest">
+                    <span>Approvals</span>
+                    <span>{requestStatus.currentApprovals} / {requestStatus.approvalsNeeded}</span>
+                  </div>
+                  <div className="w-full bg-white/10 h-4 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-primary-500 h-full transition-all duration-1000" 
+                      style={{ width: `${(requestStatus.currentApprovals / requestStatus.approvalsNeeded) * 100}%` }}
+                    ></div>
+                  </div>
+                  
+                  {!requestStatus.active ? (
+                    <button
+                      onClick={requestUnlock}
+                      disabled={loading || !isGuardianForPatient}
+                      className="w-full py-6 bg-primary-600 text-white rounded-[2rem] font-black text-xl hover:bg-primary-700 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
+                    >
+                      Initiate Emergency Unlock
+                    </button>
+                  ) : (
+                    <button
+                      onClick={approveUnlock}
+                      disabled={loading || !isGuardianForPatient}
+                      className="w-full py-6 bg-success-600 text-white rounded-[2rem] font-black text-xl hover:bg-success-700 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
+                    >
+                      Approve Unlock Request
+                    </button>
+                  )}
+                </div>
+              )}
               {patientAddress && !isGuardianForPatient && (
                 <div className="p-6 bg-danger-500/10 border border-danger-500/20 rounded-[2rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="w-10 h-10 bg-danger-500 rounded-full flex items-center justify-center text-white shadow-lg">
@@ -288,6 +416,7 @@ const GuardianManagement = () => {
               </div>
               <p className="text-danger-900/70 font-bold text-lg leading-relaxed relative z-10">Critical data is currently exposed to authorized guardians. Revoke access immediately once the situation is stabilized.</p>
               <button
+                onClick={revokeEmergency}
                 disabled={loading}
                 className="w-full py-6 bg-danger-600 text-white rounded-[2rem] font-black text-xl hover:bg-danger-700 transition-all shadow-2xl shadow-danger-300 active:scale-95 relative z-10"
               >

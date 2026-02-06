@@ -76,12 +76,15 @@ export const MediChainProvider = ({ children }) => {
   const checkHealthID = async (contract, address) => {
     try {
       const balance = await contract.balanceOf(address);
-      if (balance > 0) {
+      if (balance > 0n) {
         const tokenId = await contract.addressToTokenId(address);
         setUserHealthID(tokenId.toString());
+      } else {
+        setUserHealthID(null);
       }
     } catch (error) {
       console.error("Error checking HealthID:", error);
+      setUserHealthID(null);
     }
   };
 
@@ -120,15 +123,33 @@ export const MediChainProvider = ({ children }) => {
 
   // 🔧 UPDATED: Fetch user's medical reports using new getReports function
   const fetchMedicalReports = async (targetAddress = null) => {
-    if (!medVault || !account) return;
+    if (!medVault || !account) return [];
     try {
-      console.log("Connected wallet:", account);
-      console.log("Report count:", await medVault.getReportCount(account));
       const addressToQuery = targetAddress || account;
+      
+      // Check if user has HealthID first to avoid "No HealthID" revert
+      const balance = await healthID.balanceOf(addressToQuery);
+      if (balance === 0n) {
+        console.log("User has no HealthID, skipping report fetch");
+        setMedicalReports([]);
+        return [];
+      }
+
       // Use the new getReports function that returns string[] 
-      const reports = await medVault.getReports(addressToQuery);
-      setMedicalReports(reports);
-      return reports;
+      // Wrapped in try-catch to handle "Unauthorized access" revert
+      try {
+        const reports = await medVault.getReports(addressToQuery);
+        setMedicalReports(reports);
+        return reports;
+      } catch (err) {
+        if (err.message.includes("Unauthorized access")) {
+          console.warn("Unauthorized to fetch reports for:", addressToQuery);
+        } else {
+          console.error("Contract call failed:", err);
+        }
+        setMedicalReports([]);
+        return [];
+      }
     } catch (error) {
       console.error("Error fetching reports:", error);
       setMedicalReports([]);
@@ -141,8 +162,18 @@ export const MediChainProvider = ({ children }) => {
     if (!medVault || !account) return 0;
     try {
       const addressToQuery = targetAddress || account;
-      const count = await medVault.getReportCount(addressToQuery);
-      return count.toNumber();
+      
+      // Check if user has HealthID first
+      const balance = await healthID.balanceOf(addressToQuery);
+      if (balance === 0n) return 0;
+
+      try {
+        const count = await medVault.getReportCount(addressToQuery);
+        // ethers v6 returns bigint, use Number() instead of .toNumber()
+        return Number(count);
+      } catch (err) {
+        return 0;
+      }
     } catch (error) {
       console.error("Error getting report count:", error);
       return 0;

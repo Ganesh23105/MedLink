@@ -29,6 +29,17 @@ const DashboardTab = ({ wearableData }) => {
 
   useEffect(() => {
     const fetchHealthIdInfo = async () => {
+      // If we already have it from context, use it
+      if (userHealthID) {
+        setHealthIdInfo({
+          hasHealthID: true,
+          tokenId: userHealthID,
+          loading: false,
+          error: null
+        });
+        return;
+      }
+
       if (!userWallet) {
         setHealthIdInfo({
           hasHealthID: false,
@@ -41,21 +52,32 @@ const DashboardTab = ({ wearableData }) => {
 
       try {
         setHealthIdInfo(prev => ({ ...prev, loading: true }));
-        const response = await axios.get(`/api/blockchain/check-health-id/${userWallet}`);
+        // Try to fetch from backend, but don't fail hard if it's not available
+        const response = await axios.get(`/api/blockchain/check-health-id/${userWallet}`).catch(() => null);
         
-        setHealthIdInfo({
-          hasHealthID: response.data.hasHealthID,
-          tokenId: response.data.tokenId,
-          loading: false,
-          error: null
-        });
+        if (response && response.data) {
+          setHealthIdInfo({
+            hasHealthID: response.data.hasHealthID,
+            tokenId: response.data.tokenId,
+            loading: false,
+            error: null
+          });
+        } else {
+          // Fallback to context state if API fails
+          setHealthIdInfo({
+            hasHealthID: !!userHealthID,
+            tokenId: userHealthID,
+            loading: false,
+            error: null
+          });
+        }
       } catch (error) {
         console.error("Error fetching HealthID info:", error);
         setHealthIdInfo({
-          hasHealthID: false,
-          tokenId: null,
+          hasHealthID: !!userHealthID,
+          tokenId: userHealthID,
           loading: false,
-          error: "Failed to fetch HealthID information"
+          error: null
         });
       }
     };

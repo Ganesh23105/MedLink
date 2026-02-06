@@ -55,8 +55,13 @@ const PatientRecordsTab = () => {
         const signer = await provider.getSigner();
         const accounts = await provider.listAccounts();
 
-        const medVaultABI = Array.isArray(MedVaultABI) ? MedVaultABI : MedVaultABI.abi;
-        const healthIDABI = Array.isArray(HealthIDABI) ? HealthIDABI : HealthIDABI.abi;
+        const medVaultABI = MedVaultABI.abi || MedVaultABI;
+        const healthIDABI = HealthIDABI.abi || HealthIDABI;
+
+        if (!MEDVAULT_CONTRACT_ADDRESS || !HEALTHID_CONTRACT_ADDRESS) {
+          console.error("Contract addresses missing");
+          return;
+        }
 
         const medVaultContract = new ethers.Contract(
           MEDVAULT_CONTRACT_ADDRESS,
