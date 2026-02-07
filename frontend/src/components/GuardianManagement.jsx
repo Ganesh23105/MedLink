@@ -97,10 +97,7 @@ const GuardianManagement = () => {
           
           // Check if emergency access is active for the current user
           const isActive = await medVault.emergencyAccessActive(account);
-          if (isActive) {
-            setPatientAddress(account);
-            setEmergencyActive(true);
-          }
+          setEmergencyActive(isActive);
         } catch (e) {
           console.warn("Could not fetch initial data:", e);
         }
@@ -234,18 +231,16 @@ const GuardianManagement = () => {
   const revokeEmergency = async () => {
     try {
       setLoading(true);
-      // Fixed: Revocation should only be possible by the patient themselves
       const tx = await medVaultContract.revokeEmergencyAccess();
       await tx.wait();
       alert("Emergency access revoked! Your records are now private again.");
       setEmergencyActive(false);
-      // Refresh status
-      if (patientAddress && patientAddress.toLowerCase() === account.toLowerCase()) {
+      // If we were checking our own status, refresh it
+      if (patientAddress.toLowerCase() === account.toLowerCase()) {
         await checkGuardianStatus();
       }
     } catch (err) {
       console.error("Revocation error:", err);
-      // Provide more helpful error message for CALL_EXCEPTION
       const errorMessage = err.code === 'CALL_EXCEPTION' 
         ? "Revocation failed. This usually happens if you're not the patient or if emergency access isn't active for your account."
         : (err.reason || err.message);
@@ -307,7 +302,7 @@ const GuardianManagement = () => {
                   onChange={(e) => setNewGuardian(e.target.value)}
                   placeholder="Guardian wallet address (0x...)"
                   disabled={loading}
-                  className="w-full pl-16 pr-6 py-5 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-black focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300"
+                  className="w-full pl-16 pr-8 py-5 bg-gray-50 border border-gray-100 rounded-[2rem] text-sm font-black focus:ring-4 focus:ring-primary-500/20 focus:bg-white focus:border-primary-500 transition-all outline-none placeholder:text-gray-300 tracking-tight"
                 />
               </div>
               <button
@@ -414,39 +409,50 @@ const GuardianManagement = () => {
                 Verify Guardian Authority
               </button>
 
-              {requestStatus && !requestStatus.executed && (
+              {isGuardianForPatient && (
                 <div className="space-y-6 pt-4">
-                  <div className="flex justify-between text-sm font-black uppercase tracking-widest">
-                    <span>Approvals</span>
-                    <span>{requestStatus.currentApprovals} / {requestStatus.approvalsNeeded}</span>
-                  </div>
-                  <div className="w-full bg-white/10 h-4 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-primary-500 h-full transition-all duration-1000" 
-                      style={{ width: `${(requestStatus.currentApprovals / requestStatus.approvalsNeeded) * 100}%` }}
-                    ></div>
-                  </div>
+                  {requestStatus && (
+                    <>
+                      <div className="flex justify-between text-sm font-black uppercase tracking-widest">
+                        <span>Approvals</span>
+                        <span>{requestStatus.currentApprovals} / {requestStatus.approvalsNeeded}</span>
+                      </div>
+                      <div className="w-full bg-white/10 h-4 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-primary-500 h-full transition-all duration-1000" 
+                          style={{ width: `${(requestStatus.currentApprovals / requestStatus.approvalsNeeded) * 100}%` }}
+                        ></div>
+                      </div>
+                    </>
+                  )}
                   
-                  {!requestStatus.active ? (
+                  {(!requestStatus || (!requestStatus.active && !requestStatus.executed)) ? (
                     <button
                       onClick={requestUnlock}
-                      disabled={loading || !isGuardianForPatient}
+                      disabled={loading}
                       className="w-full py-6 bg-primary-600 text-white rounded-[2rem] font-black text-xl hover:bg-primary-700 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
                     >
                       Initiate Emergency Unlock
                     </button>
-                  ) : (
+                  ) : requestStatus.active && !requestStatus.executed ? (
                     <button
                       onClick={approveUnlock}
-                      disabled={loading || !isGuardianForPatient}
+                      disabled={loading}
                       className="w-full py-6 bg-success-600 text-white rounded-[2rem] font-black text-xl hover:bg-success-700 transition-all shadow-2xl active:scale-95 disabled:opacity-50"
                     >
                       Approve Unlock Request
                     </button>
-                  )}
+                  ) : requestStatus.executed ? (
+                    <div className="p-6 bg-success-500/10 border border-success-500/20 rounded-[2rem] flex items-center gap-4">
+                      <div className="w-10 h-10 bg-success-500 rounded-full flex items-center justify-center text-white shadow-lg">
+                        <ShieldCheck size={20} />
+                      </div>
+                      <p className="text-xs text-success-400 font-black uppercase tracking-widest leading-relaxed">Emergency access has been granted!</p>
+                    </div>
+                  ) : null}
                 </div>
               )}
-              {patientAddress && !isGuardianForPatient && (
+              {patientAddress && !isGuardianForPatient && patientAddress.toLowerCase() !== account.toLowerCase() && (
                 <div className="p-6 bg-danger-500/10 border border-danger-500/20 rounded-[2rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="w-10 h-10 bg-danger-500 rounded-full flex items-center justify-center text-white shadow-lg">
                     <X size={20} />
@@ -458,7 +464,7 @@ const GuardianManagement = () => {
           </section>
 
           {/* Emergency Revocation Section - Only visible to the patient when emergency is active */}
-          {emergencyActive && patientAddress.toLowerCase() === account.toLowerCase() && (
+          {emergencyActive && (
             <section className="bg-danger-50 p-12 rounded-[3rem] border-4 border-danger-100 space-y-8 animate-in zoom-in-95 duration-700 shadow-2xl shadow-danger-200/40 relative overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-danger-500/5 rounded-full"></div>
               <div className="flex items-center gap-6 relative z-10">
@@ -467,10 +473,10 @@ const GuardianManagement = () => {
                 </div>
                 <div>
                   <h4 className="text-3xl font-black text-danger-900 tracking-tighter">Emergency Active</h4>
-                  <p className="text-sm font-black text-danger-600 uppercase tracking-widest mt-1">Your Records are Exposed</p>
+                  <p className="text-sm font-black text-danger-600 uppercase tracking-widest mt-1">Access Protocol Active</p>
                 </div>
               </div>
-              <p className="text-danger-900/70 font-bold text-lg leading-relaxed relative z-10">Critical data is currently accessible to your authorized guardians. Terminate access immediately now that the situation is stabilized.</p>
+              <p className="text-danger-900/70 font-bold text-lg leading-relaxed relative z-10">Critical data is currently accessible to authorized guardians. Revoke access immediately once the situation is stabilized.</p>
               <button
                 onClick={revokeEmergency}
                 disabled={loading}
@@ -482,23 +488,6 @@ const GuardianManagement = () => {
                   "Terminate Emergency Access"
                 )}
               </button>
-            </section>
-          )}
-
-          {/* Status for Guardians - Show they have access but don't give them the button to revoke */}
-          {emergencyActive && patientAddress.toLowerCase() !== account.toLowerCase() && isGuardianForPatient && (
-            <section className="bg-success-50 p-12 rounded-[3rem] border-4 border-success-100 space-y-8 animate-in zoom-in-95 duration-700 shadow-2xl shadow-success-200/40 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-success-500/5 rounded-full"></div>
-              <div className="flex items-center gap-6 relative z-10">
-                <div className="w-16 h-16 bg-success-500 text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-success-400">
-                  <ShieldCheck size={32} />
-                </div>
-                <div>
-                  <h4 className="text-3xl font-black text-success-900 tracking-tighter">Access Granted</h4>
-                  <p className="text-sm font-black text-success-600 uppercase tracking-widest mt-1">Emergency Protocol Active</p>
-                </div>
-              </div>
-              <p className="text-success-900/70 font-bold text-lg leading-relaxed relative z-10">You currently have emergency access to this patient's medical records. Only the patient can terminate this access once they are stabilized.</p>
             </section>
           )}
         </div>
