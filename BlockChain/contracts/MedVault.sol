@@ -95,6 +95,12 @@ contract MedVault is AccessControl {
                 emergencyAccessPermissions[msg.sender][guardians[i]] = false;
             }
         }
+
+        // 🔧 NEW: Also clear the request state in Guardian contract
+        (bool revokeSuccess, ) = guardianContract.call(
+            abi.encodeWithSignature("revokeEmergencyAccess(address)", msg.sender)
+        );
+        require(revokeSuccess, "Guardian revocation failed");
         
         emergencyAccessActive[msg.sender] = false;
         emit EmergencyAccessRevoked(msg.sender);

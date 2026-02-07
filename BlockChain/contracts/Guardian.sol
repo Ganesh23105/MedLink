@@ -149,4 +149,10 @@ contract Guardian {
     function hasApproved(address patient, address guardian) external view returns (bool) {
         return emergencyRequests[patient].approvals[guardian];
     }
+
+    // 🔧 NEW: Allow MedVault to revoke emergency access state
+    function revokeEmergencyAccess(address patient) external {
+        require(msg.sender == medVaultContract, "Only MedVault can call");
+        _clearOldRequest(patient);
+    }
 }
