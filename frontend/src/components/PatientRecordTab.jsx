@@ -108,7 +108,7 @@ const PatientRecordsTab = () => {
         const balance = await healthIDContract.balanceOf(
           patient.walletAddress
         );
-        if (balance > 0) setUserHealthID('Available');
+        if (BigInt(balance) > BigInt(0)) setUserHealthID('Available');
       } catch (err) {
         console.error('Error checking status:', err);
       }

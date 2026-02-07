@@ -88,7 +88,8 @@ export const MedLinkProvider = ({ children }) => {
       console.log("BlockChainContext - checkHealthID called for address:", address);
       const balance = await contract.balanceOf(address);
       console.log("BlockChainContext - balance:", balance.toString());
-      if (balance > 0) {
+      // In ethers v6, balance is a BigInt. Comparison with 0 works, but be explicit.
+      if (BigInt(balance) > BigInt(0)) {
         const tokenId = await contract.addressToTokenId(address);
         console.log("BlockChainContext - tokenId found:", tokenId.toString());
         setUserHealthID(tokenId.toString());
@@ -141,21 +142,25 @@ export const MedLinkProvider = ({ children }) => {
   const fetchMedicalReports = async (targetAddress = null) => {
     if (!medVault || !account) return;
     try {
-      console.log("Connected wallet:", account);
-      const signerAddr = await provider?.getSigner()?.getAddress().catch(() => null);
-      console.log("BlockChainContext - fetchMedicalReports signer:", signerAddr);
-      console.log("BlockChainContext - medVault address (instance):", medVault.address);
       const addressToQuery = targetAddress || account;
-      console.log("BlockChainContext - calling getReportCount for:", addressToQuery);
-      console.log("BlockChainContext - caller (signer):", signerAddr);
+      console.log("BlockChainContext - fetching reports for:", addressToQuery);
+      
       // Use the new getReports function that returns string[] 
-      console.log("Report count:", await medVault.getReportCount(addressToQuery)); 
       const reports = await medVault.getReports(addressToQuery);
-      setMedicalReports(reports);
+      
+      // Only update the global medicalReports state if we're fetching for the current user
+      // This prevents doctor's view of patient reports from overwriting their own reports state
+      if (!targetAddress || targetAddress.toLowerCase() === account.toLowerCase()) {
+        setMedicalReports(reports);
+      }
+      
       return reports;
     } catch (error) {
       console.error("Error fetching reports:", error);
-      setMedicalReports([]);
+      // Only clear if it's the current user's reports
+      if (!targetAddress || targetAddress.toLowerCase() === account.toLowerCase()) {
+        setMedicalReports([]);
+      }
       return [];
     }
   };
@@ -166,7 +171,8 @@ export const MedLinkProvider = ({ children }) => {
     try {
       const addressToQuery = targetAddress || account;
       const count = await medVault.getReportCount(addressToQuery);
-      return count.toNumber();
+      // In ethers v6, BigInt doesn't have .toNumber(), use Number() or toString()
+      return typeof count === 'bigint' ? Number(count) : count;
     } catch (error) {
       console.error("Error getting report count:", error);
       return 0;
@@ -310,8 +316,18 @@ export const MedLinkProvider = ({ children }) => {
         // Process past events if needed
         // Then set up listener for new events
         medVault.on(medVault.filters.ReportUploaded(), (user, ipfsHash, event) => {
-          console.log("Report uploaded:", { user, ipfsHash });
-          if (user.toLowerCase() === account?.toLowerCase()) {
+          // In ethers v6, the arguments are passed directly, but if they are undefined, 
+          // we can try to get them from the event object itself
+          const actualUser = user || (event && event.args ? event.args[0] : null);
+          const actualIpfsHash = ipfsHash || (event && event.args ? event.args[1] : null);
+          
+          console.log("Report uploaded event received:", { 
+            user: actualUser, 
+            ipfsHash: actualIpfsHash 
+          });
+          
+          if (actualUser && account && actualUser.toLowerCase() === account.toLowerCase()) {
+            console.log("Current user uploaded a report, refreshing list...");
             fetchMedicalReports();
           }
         });
@@ -388,7 +404,7 @@ export const MedLinkProvider = ({ children }) => {
           // Check if address has a HealthID
           const balance = await healthID.balanceOf(address);
           
-          if (balance > 0) {
+          if (BigInt(balance) > BigInt(0)) {
             // Get the tokenId
             const tokenId = await healthID.addressToTokenId(address);
             
