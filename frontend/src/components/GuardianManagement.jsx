@@ -18,6 +18,7 @@ const GuardianManagement = () => {
   const [isGuardianForPatient, setIsGuardianForPatient] = useState(false);
   const [requestStatus, setRequestStatus] = useState(null);
   const [emergencyActive, setEmergencyActive] = useState(false);
+  const [isPatientEmergencyActive, setIsPatientEmergencyActive] = useState(false);
 
   const [guardianContract, setGuardianContract] = useState(null);
   const [medVaultContract, setMedVaultContract] = useState(null);
@@ -97,7 +98,7 @@ const GuardianManagement = () => {
           
           // Check if emergency access is active for the current user
           const isActive = await medVault.emergencyAccessActive(account);
-          setEmergencyActive(isActive);
+          setIsPatientEmergencyActive(isActive);
         } catch (e) {
           console.warn("Could not fetch initial data:", e);
         }
@@ -234,7 +235,7 @@ const GuardianManagement = () => {
       const tx = await medVaultContract.revokeEmergencyAccess();
       await tx.wait();
       alert("Emergency access revoked! Your records are now private again.");
-      setEmergencyActive(false);
+      setIsPatientEmergencyActive(false);
       // If we were checking our own status, refresh it
       if (patientAddress.toLowerCase() === account.toLowerCase()) {
         await checkGuardianStatus();
@@ -464,7 +465,7 @@ const GuardianManagement = () => {
           </section>
 
           {/* Emergency Revocation Section - Only visible to the patient when emergency is active */}
-          {emergencyActive && (
+          {isPatientEmergencyActive && (
             <section className="bg-danger-50 p-12 rounded-[3rem] border-4 border-danger-100 space-y-8 animate-in zoom-in-95 duration-700 shadow-2xl shadow-danger-200/40 relative overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-danger-500/5 rounded-full"></div>
               <div className="flex items-center gap-6 relative z-10">
