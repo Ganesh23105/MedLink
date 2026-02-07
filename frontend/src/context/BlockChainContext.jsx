@@ -1,4 +1,4 @@
-// src/context/MediChainContext.js
+// src/context/MedLinkContext.js
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { ethers } from "ethers";
 import HealthIDAbi from "../abis/HealthIdAbi.json";
@@ -13,10 +13,10 @@ const CONTRACT_ADDRESSES = {
 };
 
 // Create the context
-const MediChainContext = createContext();
+const MedLinkContext = createContext();
 
 // Provider component
-export const MediChainProvider = ({ children }) => {
+export const MedLinkProvider = ({ children }) => {
   const [account, setAccount] = useState(null);
   const [provider, setProvider] = useState(null);
   const [healthID, setHealthID] = useState(null);
@@ -42,13 +42,22 @@ export const MediChainProvider = ({ children }) => {
       setAccount(accounts[0]);
 
       const signer = await _provider.getSigner();
-
+      const signerAddress = await signer.getAddress();
+      console.log("BlockChainContext - signer address:", signerAddress);
+      try {
+        const network = await _provider.getNetwork();
+        console.log("BlockChainContext - provider network:", network);
+      } catch (e) {
+        console.log("BlockChainContext - could not get network info", e.message);
+      }
+      
       // Initialize all contracts
       const _healthID = new ethers.Contract(
-        CONTRACT_ADDRESSES.healthID,
-        HealthIDAbi,
+        CONTRACT_ADDRESSES.healthID, 
+        HealthIDAbi, 
         signer
       );
+      console.log("BlockChainContext - healthID contract address:", CONTRACT_ADDRESSES.healthID);
       setHealthID(_healthID);
 
       const _medVault = new ethers.Contract(
@@ -56,6 +65,7 @@ export const MediChainProvider = ({ children }) => {
         MedVaultAbi,
         signer
       );
+      console.log("BlockChainContext - medVault contract address:", CONTRACT_ADDRESSES.medVault);
       setMedVault(_medVault);
 
       const _guardian = new ethers.Contract(
@@ -75,15 +85,21 @@ export const MediChainProvider = ({ children }) => {
   // Check if user has HealthID
   const checkHealthID = async (contract, address) => {
     try {
+      console.log("BlockChainContext - checkHealthID called for address:", address);
       const balance = await contract.balanceOf(address);
-      if (balance > 0n) {
+      console.log("BlockChainContext - balance:", balance.toString());
+      if (balance > 0) {
         const tokenId = await contract.addressToTokenId(address);
+        console.log("BlockChainContext - tokenId found:", tokenId.toString());
         setUserHealthID(tokenId.toString());
       } else {
+        console.log("BlockChainContext - No HealthID found for this address (balance is 0)");
         setUserHealthID(null);
       }
     } catch (error) {
-      console.error("Error checking HealthID:", error);
+      console.error("BlockChainContext - Error checking HealthID:", error.message);
+      // If there's an error (like BAD_DATA), assume they don't have a HealthID yet
+      console.log("BlockChainContext - Setting userHealthID to null due to contract error");
       setUserHealthID(null);
     }
   };
@@ -123,33 +139,20 @@ export const MediChainProvider = ({ children }) => {
 
   // 🔧 UPDATED: Fetch user's medical reports using new getReports function
   const fetchMedicalReports = async (targetAddress = null) => {
-    if (!medVault || !account) return [];
+    if (!medVault || !account) return;
     try {
+      console.log("Connected wallet:", account);
+      const signerAddr = await provider?.getSigner()?.getAddress().catch(() => null);
+      console.log("BlockChainContext - fetchMedicalReports signer:", signerAddr);
+      console.log("BlockChainContext - medVault address (instance):", medVault.address);
       const addressToQuery = targetAddress || account;
-      
-      // Check if user has HealthID first to avoid "No HealthID" revert
-      const balance = await healthID.balanceOf(addressToQuery);
-      if (balance === 0n) {
-        console.log("User has no HealthID, skipping report fetch");
-        setMedicalReports([]);
-        return [];
-      }
-
+      console.log("BlockChainContext - calling getReportCount for:", addressToQuery);
+      console.log("BlockChainContext - caller (signer):", signerAddr);
       // Use the new getReports function that returns string[] 
-      // Wrapped in try-catch to handle "Unauthorized access" revert
-      try {
-        const reports = await medVault.getReports(addressToQuery);
-        setMedicalReports(reports);
-        return reports;
-      } catch (err) {
-        if (err.message.includes("Unauthorized access")) {
-          console.warn("Unauthorized to fetch reports for:", addressToQuery);
-        } else {
-          console.error("Contract call failed:", err);
-        }
-        setMedicalReports([]);
-        return [];
-      }
+      console.log("Report count:", await medVault.getReportCount(addressToQuery)); 
+      const reports = await medVault.getReports(addressToQuery);
+      setMedicalReports(reports);
+      return reports;
     } catch (error) {
       console.error("Error fetching reports:", error);
       setMedicalReports([]);
@@ -162,18 +165,8 @@ export const MediChainProvider = ({ children }) => {
     if (!medVault || !account) return 0;
     try {
       const addressToQuery = targetAddress || account;
-      
-      // Check if user has HealthID first
-      const balance = await healthID.balanceOf(addressToQuery);
-      if (balance === 0n) return 0;
-
-      try {
-        const count = await medVault.getReportCount(addressToQuery);
-        // ethers v6 returns bigint, use Number() instead of .toNumber()
-        return Number(count);
-      } catch (err) {
-        return 0;
-      }
+      const count = await medVault.getReportCount(addressToQuery);
+      return count.toNumber();
     } catch (error) {
       console.error("Error getting report count:", error);
       return 0;
@@ -197,12 +190,12 @@ export const MediChainProvider = ({ children }) => {
     if (!medVault || !provider) return;
     try {
       setLoading(true);
-
+      
       // Check if we already have a pending request to avoid duplicates
       // Use a limited block range for the query
       const currentBlock = await provider.getBlockNumber();
       const fromBlock = Math.max(0, currentBlock - 10000); // Last ~10000 blocks
-
+      
       const tx = await medVault.requestAccess(patientAddress);
       await tx.wait();
       setLoading(false);
@@ -252,7 +245,7 @@ export const MediChainProvider = ({ children }) => {
       const currentBlock = await provider.getBlockNumber();
       // Use a reasonable block range (e.g., 10000 blocks or about 1-2 days of blocks)
       const fromBlock = Math.max(0, currentBlock - 10000);
-
+      
       // For now, we'll store doctor addresses that we want to check
       // In a real app, you'd get this from events or a separate tracking system
       const permissions = {};
@@ -299,15 +292,15 @@ export const MediChainProvider = ({ children }) => {
   // 🔧 NEW: Listen to contract events
   const listenToEvents = async () => {
     if (!medVault || !provider) return;
-
+    
     try {
       // Get current block number and calculate a reasonable fromBlock
       const currentBlock = await provider.getBlockNumber();
       const fromBlock = Math.max(0, currentBlock - 10000); // Last ~10000 blocks
-
+      
       // Remove any existing listeners to avoid duplicates
       medVault.removeAllListeners();
-
+      
       // Set up event listeners with queryFilter to limit block range
       // For ReportUploaded events
       medVault.queryFilter(
@@ -373,7 +366,7 @@ export const MediChainProvider = ({ children }) => {
         console.error("Error in listenToEvents:", error);
       });
     }
-
+    
     // Cleanup function to remove listeners when component unmounts
     return () => {
       if (medVault) {
@@ -386,22 +379,22 @@ export const MediChainProvider = ({ children }) => {
   // This function will be used in the HealthIDPatientsTab component
   const fetchPatientsWithHealthID = async (patientAddresses) => {
     if (!healthID || !medVault) return [];
-
+    
     try {
       const patientsWithHealthID = [];
-
+      
       for (const address of patientAddresses) {
         try {
           // Check if address has a HealthID
           const balance = await healthID.balanceOf(address);
-
-          if (balance > 0n) {
+          
+          if (balance > 0) {
             // Get the tokenId
             const tokenId = await healthID.addressToTokenId(address);
-
+            
             // Check if the current user (doctor) has permission
             const hasPermission = await medVault.doctorPermissions(address, account);
-
+            
             patientsWithHealthID.push({
               address,
               tokenId: tokenId.toString(),
@@ -412,7 +405,7 @@ export const MediChainProvider = ({ children }) => {
           console.error(`Error checking HealthID for address ${address}:`, error);
         }
       }
-
+      
       return patientsWithHealthID;
     } catch (error) {
       console.error('Error fetching patients with HealthID:', error);
@@ -422,7 +415,7 @@ export const MediChainProvider = ({ children }) => {
 
   // Add this function to the context provider value
   return (
-    <MediChainContext.Provider
+    <MedLinkContext.Provider
       value={{
         // State
         account,
@@ -434,33 +427,33 @@ export const MediChainProvider = ({ children }) => {
         userHealthID,
         medicalReports,
         doctorAccess,
-
+        
         // Basic functions
         connectWallet,
         mintHealthID,
-
+        
         // Report functions
         uploadReport,
         fetchMedicalReports,
         getReportCount,
         getReportByIndex,
-
+        
         // Access control functions
         requestDoctorAccess,
         manageDoctorAccess,
         checkDoctorPermission,
         fetchDoctorAccess,
         fetchPatientsWithHealthID,
-
+        
         // Guardian functions
         requestUnlock,
         approveUnlock
       }}
     >
       {children}
-    </MediChainContext.Provider>
+    </MedLinkContext.Provider>
   );
 };
 
 // Custom hook
-export const useMediChain = () => useContext(MediChainContext);
+export const useMedLink = () => useContext(MedLinkContext);

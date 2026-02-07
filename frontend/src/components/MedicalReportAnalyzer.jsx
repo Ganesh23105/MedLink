@@ -13,10 +13,10 @@ import {
   Shield
 } from "lucide-react";
 import { Button } from "./button.jsx";
-import { useMediChain } from "../context/BlockChainContext";
+import { useMedLink } from "../context/BlockChainContext";
 
 const MedicalReportAnalyzer = () => {
-  const { uploadReport } = useMediChain();
+  const { uploadReport } = useMedLink();
   const [file, setFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -301,7 +301,7 @@ const MedicalReportAnalyzer = () => {
               <div>
                 <h4 className="text-2xl font-black tracking-tight mb-3">Clinical Disclaimer</h4>
                 <p className="text-gray-400 text-base font-bold leading-relaxed max-w-4xl">
-                  MediChain AI analysis is for informational and educational purposes only. This output is not a clinical diagnosis. Always consult with a board-certified healthcare professional for official medical assessments and treatment protocols.
+                  MedLink AI analysis is for informational and educational purposes only. This output is not a clinical diagnosis. Always consult with a board-certified healthcare professional for official medical assessments and treatment protocols.
                 </p>
               </div>
             </div>

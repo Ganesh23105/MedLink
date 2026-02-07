@@ -12,7 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-const MediChainChatbot = () => {
+const MedLinkChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -335,4 +335,4 @@ const MediChainChatbot = () => {
   );
 };
 
-export default MediChainChatbot;
+export default MedLinkChatbot;

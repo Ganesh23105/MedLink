@@ -65,7 +65,7 @@ UPLOAD_DIR = Path("audio_files")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # ChromaDB Configuration
-CHROMA_DIR = Path("./medichain_chroma_db")
+CHROMA_DIR = Path("./medlink_chroma_db")
 CHROMA_DIR.mkdir(exist_ok=True)
 
 # Embedding model
@@ -209,7 +209,7 @@ def text_to_speech(text, lang='en'):
     """Convert text to speech and save as an audio file."""
     try:
         # Generate unique filename
-        audio_filename = f"medichain_{uuid.uuid4()}.mp3"
+        audio_filename = f"medlink_{uuid.uuid4()}.mp3"
         filepath = UPLOAD_DIR / audio_filename
         
         # Limit text length for TTS

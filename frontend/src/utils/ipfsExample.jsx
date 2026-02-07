@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMediChain } from '../context/BlockChainContext';
+import { useMedLink } from '../context/BlockChainContext';
 import {
   uploadEncryptedFile,
   fetchAndDecryptFile,
@@ -8,7 +8,7 @@ import {
 } from './ipfsUtils';
 
 const IPFSMedicalReportManager = () => {
-  const { account, uploadReport, medicalReports, loading } = useMediChain();
+  const { account, uploadReport, medicalReports, loading } = useMedLink();
   const [selectedFile, setSelectedFile] = useState(null);
   const [encryptionKey, setEncryptionKey] = useState('');
   const [viewingReport, setViewingReport] = useState(null);

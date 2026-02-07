@@ -10,7 +10,7 @@ import {
   HardDrive
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
-import { useMediChain } from "../context/BlockChainContext";
+import { useMedLink } from "../context/BlockChainContext";
 import {
   uploadEncryptedFile,
   fetchAndDecryptFile,
@@ -28,7 +28,7 @@ const HealthRecordsTab = () => {
     uploadReport,
     fetchMedicalReports,
     userHealthID,
-  } = useMediChain();
+  } = useMedLink();
 
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -50,7 +50,7 @@ const HealthRecordsTab = () => {
   useEffect(() => {
     if (account && !encryptionKey) {
       setEncryptionKey(
-        `medichain_${account.slice(0, 8)}_${account.slice(-8)}`
+        `medlink_${account.slice(0, 8)}_${account.slice(-8)}`
       );
     }
   }, [account]);

@@ -9,7 +9,7 @@ contract HealthID is ERC721, Ownable {
     mapping(address => uint256) public addressToTokenId;
 
     constructor(address initialOwner) 
-        ERC721("MediChainHealthID", "MCHID") 
+        ERC721("MedLinkHealthID", "MCHID") 
         Ownable(initialOwner) 
     {}
 

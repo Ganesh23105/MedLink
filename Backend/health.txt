@@ -1,4 +1,4 @@
-=== MEDICHAIN AI - COMPREHENSIVE MEDICAL KNOWLEDGE BASE ===
+=== MEDLINK AI - COMPREHENSIVE MEDICAL KNOWLEDGE BASE ===
 
 PLATFORM INFORMATION:
 MedLink AI is a decentralized AI-powered early disease detection and health passport system. It combines artificial intelligence with blockchain technology to provide secure, intelligent healthcare solutions. The platform offers symptom checking, disease detection, decentralized health record storage, and multilingual medical assistance.

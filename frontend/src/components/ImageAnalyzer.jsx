@@ -299,7 +299,7 @@ const ImageAnalyzer = () => {
           <div>
             <h4 className="text-2xl font-black tracking-tight mb-2">Medical Disclaimer</h4>
             <p className="text-gray-400 text-base font-bold leading-relaxed max-w-4xl">
-              MediChain Intelligence is for screening and research purposes only. This AI output is not a clinical diagnosis. Always consult with a board-certified healthcare professional for official medical assessments and treatment plans.
+              MedLink Intelligence is for screening and research purposes only. This AI output is not a clinical diagnosis. Always consult with a board-certified healthcare professional for official medical assessments and treatment plans.
             </p>
           </div>
         </div>

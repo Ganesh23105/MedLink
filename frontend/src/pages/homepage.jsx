@@ -2,7 +2,7 @@ import { useState, useContext, useEffect } from "react";
 import { CTASection, FeaturesGrid, Footer, HeroSection, StatsSection } from "../components/homepagecompo";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
-import MediChainChatbot from "../components/chatbot";
+import MedLinkChatbot from "../components/chatbot";
 import React from "react";
 
 function Homepage(){
@@ -18,7 +18,7 @@ function Homepage(){
   return (
     <div>
       <div className="relative z-[100]"><Navbar /></div>
-      <MediChainChatbot/>
+      <MedLinkChatbot/>
       <HeroSection userType={userType} />
       <FeaturesGrid userType={userType} />
       <StatsSection userType={userType} />

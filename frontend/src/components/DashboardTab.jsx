@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { AuthContext } from "../context/AuthContext";
-import { useMediChain } from "../context/BlockChainContext";
+import { AuthContext } from "../context/AuthContext.jsx";
+import { useMedLink } from "../context/BlockChainContext.jsx";
 import axios from "axios";
 
 const DashboardTab = ({ wearableData }) => {
   const { user } = useContext(AuthContext);
-  const { userHealthID, userWallet } = useMediChain();
+  const { userHealthID, account } = useMedLink();
+  // console.log(useMedLink())
   
   const appointments = [
     { date: "Today", time: "2:30 PM", doctor: "Dr. Sarah Johnson", type: "Cardiology Checkup", status: "Confirmed" },
@@ -29,8 +30,12 @@ const DashboardTab = ({ wearableData }) => {
 
   useEffect(() => {
     const fetchHealthIdInfo = async () => {
+      // Log for debugging
+      console.log("DashboardTab: Checking HealthID - account:", account, "userHealthID:", userHealthID);
+
       // If we already have it from context, use it
       if (userHealthID) {
+        console.log("Found userHealthID in context:", userHealthID);
         setHealthIdInfo({
           hasHealthID: true,
           tokenId: userHealthID,
@@ -40,7 +45,8 @@ const DashboardTab = ({ wearableData }) => {
         return;
       }
 
-      if (!userWallet) {
+      if (!account) {
+        console.log("No account connected yet");
         setHealthIdInfo({
           hasHealthID: false,
           tokenId: null,
@@ -52,8 +58,11 @@ const DashboardTab = ({ wearableData }) => {
 
       try {
         setHealthIdInfo(prev => ({ ...prev, loading: true }));
-        // Try to fetch from backend, but don't fail hard if it's not available
-        const response = await axios.get(`/api/blockchain/check-health-id/${userWallet}`).catch(() => null);
+        // Try to fetch from backend
+        console.log("Fetching HealthID from backend for account:", account);
+        const response = await axios.get(`http://localhost:5000/api/blockchain/check-health-id/${account}`);
+        
+        console.log("Backend response:", response.data);
         
         if (response && response.data) {
           setHealthIdInfo({
@@ -77,13 +86,13 @@ const DashboardTab = ({ wearableData }) => {
           hasHealthID: !!userHealthID,
           tokenId: userHealthID,
           loading: false,
-          error: null
+          error: error.message
         });
       }
     };
 
     fetchHealthIdInfo();
-  }, [userWallet, userHealthID]);
+  }, [account, userHealthID]);
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
@@ -113,7 +122,7 @@ const DashboardTab = ({ wearableData }) => {
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Wallet</p>
               <p className="text-sm font-black text-gray-900 tracking-widest">
-                {userWallet ? `${userWallet.slice(0, 6)}...${userWallet.slice(-4)}` : 'DISCONNECTED'}
+                {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'DISCONNECTED'}
               </p>
             </div>
           </div>

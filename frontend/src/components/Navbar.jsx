@@ -3,7 +3,7 @@ import { Button } from "./button.jsx";
 import { connectWallet, disconnectWallet } from "../utils/wallet";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext.jsx";
-import { useMediChain } from "../context/BlockChainContext.jsx";
+import { useMedLink } from "../context/BlockChainContext.jsx";
 import axios from "axios";
 import { Stethoscope, Wallet, LogOut, User, ShieldCheck, Activity } from 'lucide-react';
 
@@ -20,17 +20,24 @@ const Navbar = () => {
   });
   
   const { user, logout } = useContext(AuthContext);
-  const { userHealthID, connectWallet: connectBlockchainWallet } = useMediChain();
+  const { userHealthID, connectWallet: connectBlockchainWallet } = useMedLink();
+  console.log("Navbar - userHealthID from context:", userHealthID)
+  console.log("Navbar - wallet:", wallet)
+  console.log("Navbar - Should show Mint button:", !!(wallet && !userHealthID && !mintStatus.success))
 
   const handleWalletConnect = async () => {
     const address = await connectWallet();
+    console.log("Navbar - Wallet connected, address:", address);
     setWallet(address);
     
     if (address) {
       await connectBlockchainWallet();
+      console.log("Navbar - Blockchain wallet connected");
       
       try {
+        console.log("Navbar - Checking HealthID for address:", address);
         const response = await axios.get(`http://localhost:5000/api/blockchain/check-health-id/${address}`);
+        console.log("Navbar - API Response:", response.data);
         if (response.data.hasHealthID) {
           setMintStatus({
             loading: false,
@@ -40,7 +47,7 @@ const Navbar = () => {
           });
         }
       } catch (error) {
-        console.error("Error checking HealthID:", error);
+        console.error("Navbar - Error checking HealthID:", error.response?.data || error.message);
       }
     }
   };
@@ -59,6 +66,8 @@ const Navbar = () => {
   const handleMintHealthID = async () => {
     if (!wallet) return;
     
+    console.log("Navbar - Starting HealthID mint for wallet:", wallet);
+    
     setMintStatus({
       loading: true,
       error: null,
@@ -68,6 +77,7 @@ const Navbar = () => {
     
     try {
       const token = localStorage.getItem('token') || (user && user.token);
+      console.log("Navbar - Sending mint request to backend");
       const response = await axios.post('http://localhost:5000/api/blockchain/mint-health-id', {
         walletAddress: wallet
       }, {
@@ -76,14 +86,20 @@ const Navbar = () => {
         }
       });
       
+      console.log("Navbar - Mint response:", response.data);
+      
       setMintStatus({
         loading: false,
         error: null,
         success: true,
         tokenId: response.data.tokenId
       });
+      
+      // Refresh the blockchain context to pick up the new HealthID
+      await connectBlockchainWallet();
+      console.log("Navbar - HealthID minted successfully, reconnected wallet");
     } catch (error) {
-      console.error("Error minting HealthID:", error);
+      console.error("Navbar - Error minting HealthID:", error);
       setMintStatus({
         loading: false,
         error: error.response?.data?.error || "Failed to mint HealthID",

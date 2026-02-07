@@ -1,13 +1,13 @@
 import { Plus, X, Loader2, ShieldCheck, AlertTriangle, Users } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { useMediChain } from "../context/BlockChainContext";
+import { useMedLink } from "../context/BlockChainContext";
 import { ethers } from "ethers";
 import guardianAbi from "../abis/GuardianAbi.json";
 import medVaultAbi from "../abis/MedVaultAbi.json";
 import { Button } from "./button";
 
 const GuardianManagement = () => {
-  const { account, provider } = useMediChain();
+  const { account, provider } = useMedLink();
 
   const [guardians, setGuardians] = useState([]);
   const [newGuardian, setNewGuardian] = useState("");

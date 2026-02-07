@@ -7,13 +7,18 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read the ABI file
+// Read the ABI files
 const healthIdAbiPath = path.join(__dirname, '..', 'abis', 'HealthIdAbi.json');
-const rawAbi = JSON.parse(fs.readFileSync(healthIdAbiPath, 'utf8'));
-const HealthIDAbi = Array.isArray(rawAbi) ? rawAbi : rawAbi.abi; // ensure it's ABI array
+const rawHealthIdAbi = JSON.parse(fs.readFileSync(healthIdAbiPath, 'utf8'));
+const HealthIDAbi = Array.isArray(rawHealthIdAbi) ? rawHealthIdAbi : rawHealthIdAbi.abi;
 
-// Contract address from deployment
+const medVaultAbiPath = path.join(__dirname, '..', 'abis', 'MedVaultAbi.json');
+const rawMedVaultAbi = JSON.parse(fs.readFileSync(medVaultAbiPath, 'utf8'));
+const MedVaultAbi = Array.isArray(rawMedVaultAbi) ? rawMedVaultAbi : rawMedVaultAbi.abi;
+
+// Contract addresses from environment
 const HEALTH_ID_CONTRACT_ADDRESS = process.env.HEALTH_ID_CONTRACT_ADDRESS || "0x840Af108761519EE0fA15C56621B877837512452";
+const MED_VAULT_CONTRACT_ADDRESS = process.env.MED_VAULT_CONTRACT_ADDRESS || "0x652c5Ae2b16B0717F5B0D2f95C9eA2ad2D96b973";
 
 // Create a provider and wallet using the owner's private key
 const setupProvider = () => {
@@ -106,6 +111,45 @@ export const checkHealthID = async (req, res) => {
     res.status(500).json({
       error: 'Failed to check HealthID',
       details: error.message
+    });
+  }
+};
+
+// Get medical reports for a user
+export const getMedicalReports = async (req, res) => {
+  const { walletAddress } = req.params;
+
+  if (!walletAddress) {
+    return res.status(400).json({ error: 'Wallet address is required' });
+  }
+
+  try {
+    const { provider } = setupProvider();
+
+    const medVaultContract = new ethers.Contract(
+      MED_VAULT_CONTRACT_ADDRESS,
+      MedVaultAbi,
+      provider
+    );
+
+    console.log(`Fetching reports for address: ${walletAddress}`);
+    
+    // Call getReports function
+    const reports = await medVaultContract.getReports(walletAddress);
+    
+    console.log(`Retrieved ${reports.length} reports for ${walletAddress}`);
+    
+    res.status(200).json({
+      reports: reports || [],
+      count: reports ? reports.length : 0,
+      address: walletAddress
+    });
+  } catch (error) {
+    console.error('Get medical reports failed:', error);
+    res.status(500).json({
+      error: 'Failed to fetch medical reports',
+      details: error.message,
+      reports: []
     });
   }
 };
