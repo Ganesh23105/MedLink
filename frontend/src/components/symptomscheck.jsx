@@ -7,13 +7,16 @@ import {
   Loader2,
   Info,
   CheckCircle2,
-  Activity
+  Activity,
+  Zap,
+  Brain
 } from "lucide-react";
 import { Button } from "./button.jsx";
 
 const SymptomChecker = () => {
   const [symptoms, setSymptoms] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [mlPredictions, setMlPredictions] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleTextSubmit = async () => {
@@ -38,6 +41,9 @@ const SymptomChecker = () => {
 
       if (data.analysis) {
         setAnalysis(data.analysis);
+        if (data.ml_predictions) {
+          setMlPredictions(data.ml_predictions);
+        }
       } else {
         throw new Error("No analysis data received");
       }
@@ -145,6 +151,66 @@ const SymptomChecker = () => {
               <p className="text-4xl font-black tracking-tighter uppercase">{analysis.urgency || "Not specified"}</p>
             </div>
           </div>
+
+          {mlPredictions && (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-10 rounded-[3rem] border-4 border-purple-200 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-purple-100 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
+              <div className="relative z-10 space-y-10">
+                <div className="flex items-center gap-5">
+                  <div className="p-4 bg-purple-600 text-white rounded-2xl shadow-xl animate-pulse">
+                    <Brain size={32} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-purple-600 uppercase tracking-[0.3em]">Machine Learning Predictions</p>
+                    <p className="text-3xl font-black text-purple-900 tracking-tighter">Neural Engine Diagnosis</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white/70 backdrop-blur p-8 rounded-[2rem] border-2 border-purple-200 shadow-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[10px] font-black text-purple-600 uppercase tracking-[0.3em]">Final Prediction</p>
+                      <Zap size={24} className="text-purple-600" />
+                    </div>
+                    <p className="text-2xl font-black text-gray-900 tracking-tight">
+                      {mlPredictions.final_prediction || "No prediction available"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black text-purple-600 uppercase tracking-[0.3em] ml-2">Model Consensus</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white/70 backdrop-blur p-6 rounded-[1.5rem] border-2 border-blue-200 shadow-lg hover:shadow-xl transition-shadow">
+                        <p className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-3">Naive Bayes</p>
+                        <p className="text-sm font-black text-gray-800 leading-tight">{mlPredictions.naive_bayes_prediction || "N/A"}</p>
+                      </div>
+                      <div className="bg-white/70 backdrop-blur p-6 rounded-[1.5rem] border-2 border-indigo-200 shadow-lg hover:shadow-xl transition-shadow">
+                        <p className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] mb-3">Random Forest</p>
+                        <p className="text-sm font-black text-gray-800 leading-tight">{mlPredictions.rf_model_prediction || "N/A"}</p>
+                      </div>
+                      <div className="bg-white/70 backdrop-blur p-6 rounded-[1.5rem] border-2 border-violet-200 shadow-lg hover:shadow-xl transition-shadow">
+                        <p className="text-xs font-black text-violet-600 uppercase tracking-[0.2em] mb-3">Support Vector</p>
+                        <p className="text-sm font-black text-gray-800 leading-tight">{mlPredictions.svm_model_prediction || "N/A"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {mlPredictions.mapped_symptoms && mlPredictions.mapped_symptoms.length > 0 && (
+                    <div className="bg-white/70 backdrop-blur p-6 rounded-[1.5rem] border-2 border-purple-200 shadow-lg">
+                      <p className="text-[10px] font-black text-purple-600 uppercase tracking-[0.3em] mb-4">Identified Symptoms</p>
+                      <div className="flex flex-wrap gap-3">
+                        {mlPredictions.mapped_symptoms.map((symptom, index) => (
+                          <span key={index} className="px-5 py-3 bg-purple-100 text-purple-900 rounded-full font-black text-sm border-2 border-purple-300 shadow-md hover:bg-purple-200 transition-colors">
+                            {symptom}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             <div className="bg-white p-10 rounded-[3rem] border border-gray-100 space-y-8 hover:shadow-2xl hover:border-primary-100 transition-all duration-500 group relative overflow-hidden">
