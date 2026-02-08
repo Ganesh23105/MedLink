@@ -94,6 +94,12 @@
           "internalType": "address[]",
           "name": "guardians",
           "type": "address[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "expiry",
+          "type": "uint256"
         }
       ],
       "name": "EmergencyAccessGranted",
@@ -110,6 +116,56 @@
         }
       ],
       "name": "EmergencyAccessRevoked",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "patient",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "doctor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        }
+      ],
+      "name": "RecordAccessGranted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "patient",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "doctor",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        }
+      ],
+      "name": "RecordAccessRevoked",
       "type": "event"
     },
     {
@@ -282,12 +338,12 @@
           "type": "address"
         }
       ],
-      "name": "emergencyAccessActive",
+      "name": "emergencyAccessExpiry",
       "outputs": [
         {
-          "internalType": "bool",
+          "internalType": "uint256",
           "name": "",
-          "type": "bool"
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -311,35 +367,6 @@
         {
           "internalType": "bool",
           "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "patient",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "doctor",
-          "type": "address"
-        }
-      ],
-      "name": "getPendingRequestStatus",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "pending",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "granted",
           "type": "bool"
         }
       ],
@@ -451,9 +478,50 @@
           "internalType": "address[]",
           "name": "guardians",
           "type": "address[]"
+        },
+        {
+          "internalType": "uint256",
+          "name": "duration",
+          "type": "uint256"
         }
       ],
       "name": "grantEmergencyAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "doctor",
+          "type": "address"
+        },
+        {
+          "internalType": "string[]",
+          "name": "ipfsHashes",
+          "type": "string[]"
+        }
+      ],
+      "name": "grantMultipleRecordsAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "doctor",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        }
+      ],
+      "name": "grantRecordAccess",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -503,30 +571,6 @@
         }
       ],
       "name": "hasEmergencyAccess",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "patient",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "doctor",
-          "type": "address"
-        }
-      ],
-      "name": "hasPendingRequest",
       "outputs": [
         {
           "internalType": "bool",
@@ -601,6 +645,35 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "name": "recordPermissions",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes32",
           "name": "role",
           "type": "bytes32"
@@ -658,6 +731,24 @@
     {
       "inputs": [],
       "name": "revokeEmergencyAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "doctor",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "ipfsHash",
+          "type": "string"
+        }
+      ],
+      "name": "revokeRecordAccess",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

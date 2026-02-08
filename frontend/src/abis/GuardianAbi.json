@@ -10,6 +10,25 @@
         },
         {
           "indexed": false,
+          "internalType": "uint256",
+          "name": "duration",
+          "type": "uint256"
+        }
+      ],
+      "name": "EmergencyDurationUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "patient",
+          "type": "address"
+        },
+        {
+          "indexed": false,
           "internalType": "address[]",
           "name": "guardians",
           "type": "address[]"
@@ -45,6 +64,12 @@
           "internalType": "address",
           "name": "patient",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "duration",
+          "type": "uint256"
         }
       ],
       "name": "UnlockExecuted",
@@ -236,6 +261,25 @@
           "internalType": "address",
           "name": "",
           "type": "address"
+        }
+      ],
+      "name": "patientEmergencyDuration",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         },
         {
           "internalType": "uint256",
@@ -276,6 +320,19 @@
         }
       ],
       "name": "revokeEmergencyAccess",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_duration",
+          "type": "uint256"
+        }
+      ],
+      "name": "setEmergencyDuration",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
