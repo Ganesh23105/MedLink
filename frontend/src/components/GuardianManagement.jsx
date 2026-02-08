@@ -1,4 +1,5 @@
-import { Plus, X, Loader2, ShieldCheck, AlertTriangle, Users, Clock, History } from "lucide-react";
+import { Plus, X, Loader2, ShieldCheck, AlertTriangle, Users, Clock, History, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import { useMedLink } from "../context/BlockChainContext";
 import { ethers } from "ethers";
@@ -7,6 +8,7 @@ import medVaultAbi from "../abis/MedVaultAbi.json";
 import { Button } from "./button";
 
 const GuardianManagement = () => {
+  const navigate = useNavigate();
   const { account, provider, setEmergencyDuration, revokeEmergencyAccess: contextRevokeEmergency } = useMedLink();
 
   const [guardians, setGuardians] = useState([]);
@@ -250,6 +252,42 @@ const GuardianManagement = () => {
     }
   };
 
+  const viewPatientReports = async () => {
+    if (!patientAddress) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/auth/patients/wallet/${patientAddress}`);
+      
+      if (response.ok) {
+        const patientData = await response.json();
+        navigate('/patient-records', { state: { patient: patientData } });
+      } else {
+        navigate('/patient-records', { 
+          state: { 
+            patient: { 
+              walletAddress: patientAddress, 
+              name: "Emergency Patient",
+              _id: "emergency" 
+            } 
+          } 
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching patient details:", err);
+      navigate('/patient-records', { 
+        state: { 
+          patient: { 
+            walletAddress: patientAddress, 
+            name: "Emergency Patient",
+            _id: "emergency" 
+          } 
+        } 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
@@ -477,6 +515,16 @@ const GuardianManagement = () => {
                     <History size={16} className="text-primary-400" />
                     Window Closes: {new Date(requestStatus.unlockTime * 1000).toLocaleString()}
                   </div>
+                )}
+
+                {emergencyActive && (
+                  <Button
+                    onClick={viewPatientReports}
+                    disabled={loading}
+                    className="w-full py-5 bg-success-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-success-700 transition-all shadow-xl shadow-success-100 flex items-center justify-center gap-3"
+                  >
+                    <FileText size={18} /> View Patient Reports
+                  </Button>
                 )}
               </div>
             )}
