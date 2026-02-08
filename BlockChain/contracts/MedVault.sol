@@ -8,20 +8,30 @@ contract MedVault is AccessControl {
     bytes32 public constant DOCTOR_ROLE = keccak256("DOCTOR_ROLE");
     
     address public healthIDContract;
-    address public guardianContract; // 🔧 NEW: Guardian contract reference
+    address public guardianContract; 
     
     mapping(address => string[]) private userReports;
+    
+    // 🔧 UPDATED: Record-level permissions
+    // patient => doctor => ipfsHash => hasAccess
+    mapping(address => mapping(address => mapping(string => bool))) public recordPermissions;
+    
+    // Legacy mapping for backward compatibility or "all access" if needed
+    // However, we will prioritize record-level permissions
     mapping(address => mapping(address => bool)) public doctorPermissions;
+    
     mapping(address => mapping(address => bool)) public pendingAccessRequests;
     
-    // 🔧 NEW: Emergency access tracking
-    mapping(address => bool) public emergencyAccessActive;
+    // 🔧 UPDATED: Emergency access tracking with expiry
+    mapping(address => uint256) public emergencyAccessExpiry;
     mapping(address => mapping(address => bool)) public emergencyAccessPermissions;
     
     event ReportUploaded(address indexed user, string ipfsHash);
     event AccessRequested(address indexed doctor, address indexed patient);
     event AccessApproved(address indexed doctor, address indexed patient, bool granted);
-    event EmergencyAccessGranted(address indexed patient, address[] guardians);
+    event RecordAccessGranted(address indexed patient, address indexed doctor, string ipfsHash);
+    event RecordAccessRevoked(address indexed patient, address indexed doctor, string ipfsHash);
+    event EmergencyAccessGranted(address indexed patient, address[] guardians, uint256 expiry);
     event EmergencyAccessRevoked(address indexed patient);
     
     constructor(address _healthIDContract, address _guardianContract) {
@@ -30,7 +40,6 @@ contract MedVault is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
     
-    // 🔧 NEW: Set guardian contract (if deployed separately)
     function setGuardianContract(address _guardianContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
         guardianContract = _guardianContract;
     }
@@ -44,15 +53,36 @@ contract MedVault is AccessControl {
     function requestAccess(address patient) external {
         require(patient != address(0), "Invalid patient address");
         require(msg.sender != patient, "Cannot request access to own records");
-        require(!doctorPermissions[patient][msg.sender], "Access already granted");
         
         pendingAccessRequests[patient][msg.sender] = true;
         emit AccessRequested(msg.sender, patient);
     }
+
+    // 🔧 NEW: Grant access to specific records
+    function grantRecordAccess(address doctor, string memory ipfsHash) public {
+        require(doctor != address(0), "Invalid doctor address");
+        recordPermissions[msg.sender][doctor][ipfsHash] = true;
+        emit RecordAccessGranted(msg.sender, doctor, ipfsHash);
+    }
+
+    // 🔧 NEW: Grant access to multiple records
+    function grantMultipleRecordsAccess(address doctor, string[] memory ipfsHashes) external {
+        for (uint i = 0; i < ipfsHashes.length; i++) {
+            grantRecordAccess(doctor, ipfsHashes[i]);
+        }
+    }
+
+    // 🔧 NEW: Revoke access to specific records
+    function revokeRecordAccess(address doctor, string memory ipfsHash) public {
+        recordPermissions[msg.sender][doctor][ipfsHash] = false;
+        emit RecordAccessRevoked(msg.sender, doctor, ipfsHash);
+    }
     
+    // 🔧 UPDATED: approveAccess now grants "all" access via legacy mapping
+    // but we encourage using grantRecordAccess for granularity
     function approveAccess(address doctor, bool grant) external {
         require(doctor != address(0), "Invalid doctor address");
-        require(pendingAccessRequests[msg.sender][doctor], "No pending request from this doctor");
+        require(pendingAccessRequests[msg.sender][doctor], "No pending request");
         
         doctorPermissions[msg.sender][doctor] = grant;
         pendingAccessRequests[msg.sender][doctor] = false;
@@ -66,102 +96,115 @@ contract MedVault is AccessControl {
         emit AccessApproved(doctor, msg.sender, false);
     }
     
-    // 🔧 NEW: Emergency access functions
-    function grantEmergencyAccess(address patient, address[] memory guardians) external {
+    // 🔧 UPDATED: Emergency access with duration
+    function grantEmergencyAccess(address patient, address[] memory guardians, uint256 duration) external {
         require(msg.sender == guardianContract, "Only guardian contract can call");
         
-        emergencyAccessActive[patient] = true;
+        uint256 expiry = block.timestamp + duration;
+        emergencyAccessExpiry[patient] = expiry;
         
-        // Grant access to all guardians
         for (uint i = 0; i < guardians.length; i++) {
             emergencyAccessPermissions[patient][guardians[i]] = true;
         }
         
-        emit EmergencyAccessGranted(patient, guardians);
+        emit EmergencyAccessGranted(patient, guardians, expiry);
     }
     
-    // 🔧 NEW: Patient can revoke emergency access when they recover
     function revokeEmergencyAccess() external {
-        require(emergencyAccessActive[msg.sender], "No emergency access active");
+        // Patient can always revoke their own emergency access
+        _clearEmergencyAccess(msg.sender);
         
-        // Get guardians from guardian contract and revoke their access
+        // Notify Guardian contract
+        (bool success, ) = guardianContract.call(
+            abi.encodeWithSignature("revokeEmergencyAccess(address)", msg.sender)
+        );
+        require(success, "Guardian revocation failed");
+        
+        emit EmergencyAccessRevoked(msg.sender);
+    }
+
+    // Internal helper to clear state
+    function _clearEmergencyAccess(address patient) internal {
+        emergencyAccessExpiry[patient] = 0;
+        
         (bool success, bytes memory data) = guardianContract.call(
-            abi.encodeWithSignature("getGuardians(address)", msg.sender)
+            abi.encodeWithSignature("getGuardians(address)", patient)
         );
         
         if (success) {
             address[] memory guardians = abi.decode(data, (address[]));
             for (uint i = 0; i < guardians.length; i++) {
-                emergencyAccessPermissions[msg.sender][guardians[i]] = false;
+                emergencyAccessPermissions[patient][guardians[i]] = false;
+            }
+        }
+    }
+    
+    function hasEmergencyAccess(address patient, address accessor) public view returns (bool) {
+        return block.timestamp < emergencyAccessExpiry[patient] && emergencyAccessPermissions[patient][accessor];
+    }
+    
+    // 🔧 UPDATED: Filter reports based on record-level permissions
+    function getReports(address patient) external view returns (string[] memory) {
+        if (msg.sender == patient || hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || doctorPermissions[patient][msg.sender] || hasEmergencyAccess(patient, msg.sender)) {
+            return userReports[patient];
+        }
+
+        // If it's a doctor with specific record permissions
+        uint256 count = 0;
+        for (uint i = 0; i < userReports[patient].length; i++) {
+            if (recordPermissions[patient][msg.sender][userReports[patient][i]]) {
+                count++;
             }
         }
 
-        // 🔧 NEW: Also clear the request state in Guardian contract
-        (bool revokeSuccess, ) = guardianContract.call(
-            abi.encodeWithSignature("revokeEmergencyAccess(address)", msg.sender)
-        );
-        require(revokeSuccess, "Guardian revocation failed");
-        
-        emergencyAccessActive[msg.sender] = false;
-        emit EmergencyAccessRevoked(msg.sender);
+        // If no specific records are shared and no other access, revert
+        require(count > 0, "Unauthorized access");
+
+        string[] memory allowedReports = new string[](count);
+        uint256 index = 0;
+        for (uint i = 0; i < userReports[patient].length; i++) {
+            if (recordPermissions[patient][msg.sender][userReports[patient][i]]) {
+                allowedReports[index] = userReports[patient][i];
+                index++;
+            }
+        }
+        return allowedReports;
     }
     
-    // 🔧 NEW: Check if someone has emergency access
-    function hasEmergencyAccess(address patient, address accessor) external view returns (bool) {
-        return emergencyAccessActive[patient] && emergencyAccessPermissions[patient][accessor];
-    }
-    
-    function hasPendingRequest(address patient, address doctor) external view returns (bool) {
-        return pendingAccessRequests[patient][doctor];
-    }
-    
-    function getPendingRequestStatus(address patient, address doctor) external view returns (bool pending, bool granted) {
-        return (pendingAccessRequests[patient][doctor], doctorPermissions[patient][doctor]);
-    }
-    
-    // 🔧 UPDATED: Modified to include emergency access
-    function getReports(address patient) external view returns (string[] memory) {
-        require(
-            msg.sender == patient || 
-            doctorPermissions[patient][msg.sender] || 
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) ||
-            (emergencyAccessActive[patient] && emergencyAccessPermissions[patient][msg.sender]), // 🔧 NEW: Emergency access
-            "Unauthorized access"
-        );
-        return userReports[patient];
-    }
-    
-    // 🔧 UPDATED: Modified to include emergency access
     function getReportCount(address patient) external view returns (uint256) {
-        require(
-            msg.sender == patient || 
-            doctorPermissions[patient][msg.sender] || 
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) ||
-            (emergencyAccessActive[patient] && emergencyAccessPermissions[patient][msg.sender]), // 🔧 NEW: Emergency access
-            "Unauthorized access"
-        );
-        return userReports[patient].length;
+        if (msg.sender == patient || hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || doctorPermissions[patient][msg.sender] || hasEmergencyAccess(patient, msg.sender)) {
+            return userReports[patient].length;
+        }
+
+        uint256 count = 0;
+        for (uint i = 0; i < userReports[patient].length; i++) {
+            if (recordPermissions[patient][msg.sender][userReports[patient][i]]) {
+                count++;
+            }
+        }
+        return count;
     }
     
-    // 🔧 UPDATED: Modified to include emergency access
     function getReportByIndex(address patient, uint256 index) external view returns (string memory) {
+        require(index < userReports[patient].length, "Index out of bounds");
+        string memory report = userReports[patient][index];
+
         require(
             msg.sender == patient || 
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) || 
             doctorPermissions[patient][msg.sender] || 
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) ||
-            (emergencyAccessActive[patient] && emergencyAccessPermissions[patient][msg.sender]), // 🔧 NEW: Emergency access
+            hasEmergencyAccess(patient, msg.sender) ||
+            recordPermissions[patient][msg.sender][report],
             "Unauthorized access"
         );
-        require(index < userReports[patient].length, "Report index out of bounds");
-        return userReports[patient][index];
+        
+        return report;
     }
     
-    // 🔧 NEW: Admin function to grant DOCTOR_ROLE (if needed for other features)
     function grantDoctorRole(address doctor) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(DOCTOR_ROLE, doctor);
     }
     
-    // 🔧 NEW: Admin function to revoke DOCTOR_ROLE
     function revokeDoctorRole(address doctor) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _revokeRole(DOCTOR_ROLE, doctor);
     }
