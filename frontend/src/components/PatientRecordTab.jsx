@@ -461,13 +461,7 @@ const PatientRecordsTab = () => {
                       </div>
                     </div>
 
-                    <Button
-                      onClick={() => handleDownload(report.ipfsHash, report.fileName)}
-                      className="w-full mt-4 flex items-center justify-center gap-2"
-                    >
-                      <Download size={16} />
-                      Download
-                    </Button>
+
                   </div>
                 ))}
               </div>

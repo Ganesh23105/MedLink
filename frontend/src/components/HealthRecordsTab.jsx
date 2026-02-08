@@ -17,6 +17,7 @@ import {
   createDownloadableUrl,
   downloadFile,
   viewDecryptedImage,
+  downloadDecryptedFile,
 } from "../utils/ipfsUtils";
 import { Button } from "./button";
 
