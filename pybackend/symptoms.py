@@ -114,8 +114,92 @@ def map_symptoms_with_genai(user_input: str) -> List[str]:
         logger.error(f"Error mapping symptoms with Gen AI: {e}")
         return []
 
+def get_model_confidence(model, input_df):
+    """Extract confidence scores from model predictions."""
+    try:
+        # For Naive Bayes and Random Forest, use predict_proba
+        if hasattr(model, 'predict_proba'):
+            proba = model.predict_proba(input_df)[0]
+            max_confidence = np.max(proba)
+            return max_confidence
+        # For SVM, use decision_function as proxy for confidence
+        elif hasattr(model, 'decision_function'):
+            decision = model.decision_function(input_df)[0]
+            # Normalize to 0-1 range
+            confidence = 1 / (1 + np.exp(-decision))
+            return float(confidence)
+        else:
+            return 0.5  # Default confidence if method unavailable
+    except Exception as e:
+        logger.warning(f"Error calculating confidence: {e}")
+        return 0.5
+
+def resolve_ensemble_consensus(predictions: dict, confidences: dict) -> dict:
+    """
+    Resolve predictions when models disagree.
+    Handles three cases:
+    1. Unanimous (all agree) - return prediction
+    2. Majority (2 agree) - return majority prediction
+    3. All Different (no consensus) - weighted voting by confidence
+    """
+    pred_list = [predictions["rf"], predictions["nb"], predictions["svm"]]
+    conf_list = [confidences["rf"], confidences["nb"], confidences["svm"]]
+    model_names = ["Random Forest", "Naive Bayes", "Support Vector"]
+    
+    # Count occurrences
+    from collections import Counter
+    vote_counts = Counter(pred_list)
+    
+    # Case 1: All three same (unanimous)
+    if len(vote_counts) == 1:
+        return {
+            "consensus_type": "UNANIMOUS",
+            "final_prediction": pred_list[0],
+            "confidence_score": np.mean(conf_list),
+            "voting_details": "All 3 models agree"
+        }
+    
+    # Case 2: Two agree (majority)
+    if max(vote_counts.values()) == 2:
+        majority_pred = vote_counts.most_common(1)[0][0]
+        majority_models = [model_names[i] for i, p in enumerate(pred_list) if p == majority_pred]
+        avg_conf = np.mean([conf_list[i] for i, p in enumerate(pred_list) if p == majority_pred])
+        
+        return {
+            "consensus_type": "MAJORITY",
+            "final_prediction": majority_pred,
+            "confidence_score": avg_conf,
+            "voting_details": f"2/3 models agree: {', '.join(majority_models)}"
+        }
+    
+    # Case 3: All different - Weighted voting by confidence
+    # Assign each vote weighted by model confidence
+    weighted_votes = {}
+    for pred, conf, model in zip(pred_list, conf_list, model_names):
+        if pred not in weighted_votes:
+            weighted_votes[pred] = {"score": 0, "models": []}
+        weighted_votes[pred]["score"] += conf
+        weighted_votes[pred]["models"].append(model)
+    
+    final_pred = max(weighted_votes.items(), key=lambda x: x[1]["score"])[0]
+    winning_conf = weighted_votes[final_pred]["score"] / sum(c for c in conf_list)
+    
+    return {
+        "consensus_type": "WEIGHTED_VOTING",
+        "final_prediction": final_pred,
+        "confidence_score": winning_conf,
+        "voting_details": "All models differ - used confidence-weighted voting",
+        "weighted_breakdown": {
+            pred: {
+                "confidence_sum": score["score"],
+                "models": score["models"]
+            }
+            for pred, score in weighted_votes.items()
+        }
+    }
+
 def predict_disease_ml(mapped_symptoms: List[str]) -> dict:
-    """Predict disease using the trained ML models."""
+    """Predict disease using trained ML models with advanced consensus."""
     if not all([svm_model, nb_model, rf_model, symptom_index, encoder_classes]):
         return {"error": "ML models not loaded"}
     
@@ -139,14 +223,28 @@ def predict_disease_ml(mapped_symptoms: List[str]) -> dict:
     nb_pred = encoder_classes[nb_model.predict(input_df)[0]]
     svm_pred = encoder_classes[svm_model.predict(input_df)[0]]
     
-    # Final prediction using mode
-    final_pred = statistics.mode([rf_pred, nb_pred, svm_pred])
+    # Get confidence scores for each prediction
+    rf_conf = get_model_confidence(rf_model, input_df)
+    nb_conf = get_model_confidence(nb_model, input_df)
+    svm_conf = get_model_confidence(svm_model, input_df)
+    
+    # Resolve consensus with advanced logic
+    predictions = {"rf": rf_pred, "nb": nb_pred, "svm": svm_pred}
+    confidences = {"rf": rf_conf, "nb": nb_conf, "svm": svm_conf}
+    consensus = resolve_ensemble_consensus(predictions, confidences)
     
     return {
         "rf_model_prediction": rf_pred,
+        "rf_confidence": float(rf_conf),
         "naive_bayes_prediction": nb_pred,
+        "naive_bayes_confidence": float(nb_conf),
         "svm_model_prediction": svm_pred,
-        "final_prediction": final_pred,
+        "svm_confidence": float(svm_conf),
+        "final_prediction": consensus["final_prediction"],
+        "consensus_type": consensus["consensus_type"],
+        "consensus_confidence": float(consensus["confidence_score"]),
+        "voting_details": consensus["voting_details"],
+        "weighted_breakdown": consensus.get("weighted_breakdown", None),
         "mapped_symptoms": mapped_symptoms
     }
 

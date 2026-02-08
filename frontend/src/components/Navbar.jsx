@@ -21,9 +21,9 @@ const Navbar = () => {
   
   const { user, logout } = useContext(AuthContext);
   const { userHealthID, connectWallet: connectBlockchainWallet } = useMedLink();
-  console.log("Navbar - userHealthID from context:", userHealthID)
-  console.log("Navbar - wallet:", wallet)
-  console.log("Navbar - Should show Mint button:", !!(wallet && !userHealthID && !mintStatus.success))
+  // console.log("Navbar - userHealthID from context:", userHealthID)
+  // console.log("Navbar - wallet:", wallet)
+  // console.log("Navbar - Should show Mint button:", !!(wallet && !userHealthID && !mintStatus.success))
 
   const handleWalletConnect = async () => {
     const address = await connectWallet();
@@ -132,7 +132,7 @@ const Navbar = () => {
   }, [user]);
 
   return (
-    <nav className="w-full bg-white/80 backdrop-blur-xl border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-[100]">
+    <nav className="w-full bg-white/80 backdrop-blur-xl border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-100">
       <Link to="/" className="flex items-center gap-3 group">
         <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary-200 group-hover:scale-110 transition-transform">
           <Stethoscope size={24} />

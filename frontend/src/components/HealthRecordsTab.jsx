@@ -182,7 +182,7 @@ const HealthRecordsTab = () => {
         <Button
           onClick={() => setShowUploadModal(true)}
           disabled={!userHealthID}
-          className="px-10 py-5 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-gray-200 hover:bg-primary-600 hover:shadow-primary-100 active:scale-95 transition-all flex items-center gap-3"
+          className="px-10 py-5 bg-gray-900 text-white rounded-4xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-gray-200 hover:bg-primary-600 hover:shadow-primary-100 active:scale-95 transition-all flex items-center gap-3"
         >
           <Plus size={20} className="text-primary-400" /> Add New Entry
         </Button>
@@ -194,7 +194,7 @@ const HealthRecordsTab = () => {
             <Shield size={28} />
           </div>
           <div>
-            <p className="text-lg font-black text-warning-900 mb-1 tracking-tight uppercase tracking-widest">HealthID Required</p>
+            <p className="text-lg font-black text-warning-900 mb-1 tracking-tight uppercase">HealthID Required</p>
             <p className="text-base text-warning-700 font-bold leading-relaxed">
               You need an active <strong>HealthID</strong> to secure medical records. Please mint your ID in the dashboard settings to activate your vault.
             </p>
@@ -205,7 +205,7 @@ const HealthRecordsTab = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {medicalReports.length === 0 ? (
           <div className="col-span-full py-40 bg-white rounded-[3rem] border border-dashed border-gray-200 flex flex-col items-center justify-center shadow-sm group">
-            <div className="w-24 h-24 bg-gray-50 text-gray-200 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500">
+            <div className="w-24 h-24 bg-gray-50 text-gray-200 rounded-4xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500">
               <FileText size={48} />
             </div>
             <p className="text-2xl font-black text-gray-400 tracking-tight">Vault is Empty</p>
@@ -217,7 +217,7 @@ const HealthRecordsTab = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-50 transition-all duration-700"></div>
               
               <div className="flex items-start justify-between mb-10 relative z-10">
-                <div className="w-16 h-16 bg-gray-50 text-primary-600 rounded-[1.5rem] flex items-center justify-center shadow-inner group-hover:bg-primary-600 group-hover:text-white group-hover:rotate-6 transition-all duration-500">
+                <div className="w-16 h-16 bg-gray-50 text-primary-600 rounded-3xl flex items-center justify-center shadow-inner group-hover:bg-primary-600 group-hover:text-white group-hover:rotate-6 transition-all duration-500">
                   <FileText size={32} />
                 </div>
                 <div className="px-5 py-2 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 group-hover:bg-white transition-colors">
@@ -237,7 +237,7 @@ const HealthRecordsTab = () => {
                 <button
                   onClick={() => handleViewReport(ipfsHash)}
                   disabled={decrypting}
-                  className="flex items-center justify-center gap-3 py-4 bg-gray-50 text-gray-700 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-gray-900 hover:text-white transition-all active:scale-95 border border-transparent hover:border-gray-900"
+                  className="flex items-center justify-center gap-3 py-4 bg-gray-50 text-gray-700 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-gray-900 hover:text-white transition-all active:scale-95 border border-transparent hover:border-gray-900"
                 >
                   {decrypting ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />} View
                 </button>
@@ -248,7 +248,7 @@ const HealthRecordsTab = () => {
                       `medical_record_${index + 1}`
                     )
                   }
-                  className="flex items-center justify-center gap-3 py-4 bg-primary-50 text-primary-600 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary-600 hover:text-white transition-all active:scale-95 shadow-sm shadow-primary-50"
+                  className="flex items-center justify-center gap-3 py-4 bg-primary-50 text-primary-600 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary-600 hover:text-white transition-all active:scale-95 shadow-sm shadow-primary-50"
                 >
                   <Download size={18} /> Get File
                 </button>
@@ -259,14 +259,14 @@ const HealthRecordsTab = () => {
       </div>
 
       {viewingReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
             <div className="p-12 border-b border-gray-50 flex items-center justify-between">
               <div className="space-y-2">
                 <h3 className="text-4xl font-black text-gray-900 tracking-tighter">View Record</h3>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Decrypted Content</p>
               </div>
-              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-[2rem] transition-all active:scale-90">
+              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-4xl transition-all active:scale-90">
                 <X size={32} />
               </button>
             </div>
@@ -280,14 +280,14 @@ const HealthRecordsTab = () => {
       )}
 
       {showUploadModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
           <div className="relative bg-white w-full rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
             <div className="p-12 border-b border-gray-50 flex items-center justify-between">
               <div className="space-y-2">
                 <h3 className="text-4xl font-black text-gray-900 tracking-tighter">Vault Encryption</h3>
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">End-to-End Secure Protocol</p>
               </div>
-              <button onClick={() => setShowUploadModal(false)} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-[2rem] transition-all active:scale-90">
+              <button onClick={() => setShowUploadModal(false)} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-4xl transition-all active:scale-90">
                 <X size={32} />
               </button>
             </div>
@@ -308,7 +308,7 @@ const HealthRecordsTab = () => {
                 </div>
                 {selectedFile ? (
                   <div className="text-center">
-                    <p className="text-xl font-black text-gray-900 truncate max-w-[320px] tracking-tight">{selectedFile.name}</p>
+                    <p className="text-xl font-black text-gray-900 truncate max-w-80 tracking-tight">{selectedFile.name}</p>
                     <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-2">Payload: {(selectedFile.size / 1024).toFixed(1)} KB</p>
                   </div>
                 ) : (
@@ -325,7 +325,7 @@ const HealthRecordsTab = () => {
                   <select
                     value={reportType}
                     onChange={(e) => setReportType(e.target.value)}
-                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2rem] text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none appearance-none cursor-pointer"
+                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none appearance-none cursor-pointer"
                   >
                     <option value="">Select record type...</option>
                     <option>Lab Results</option>
@@ -345,7 +345,7 @@ const HealthRecordsTab = () => {
                     onChange={(e) => setReportDescription(e.target.value)}
                     rows="3"
                     placeholder="Enter diagnostic details or medical context..."
-                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2rem] text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300 tracking-tight"
+                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300 tracking-tight"
                   />
                 </div>
 
@@ -360,7 +360,7 @@ const HealthRecordsTab = () => {
                       value={encryptionKey}
                       onChange={(e) => setEncryptionKey(e.target.value)}
                       placeholder="Enter security key"
-                      className="w-full pl-16 pr-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2rem] text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300"
+                      className="w-full pl-16 pr-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300"
                     />
                   </div>
                 </div>
@@ -370,14 +370,14 @@ const HealthRecordsTab = () => {
             <div className="p-12 bg-gray-50 border-t border-gray-100 flex gap-6">
               <button 
                 onClick={() => setShowUploadModal(false)}
-                className="flex-1 py-5 px-8 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-all"
+                className="flex-1 py-5 px-8 rounded-4xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-all"
               >
                 Discard
               </button>
               <button 
                 onClick={handleUpload} 
                 disabled={uploading || !selectedFile || !reportType || !encryptionKey}
-                className="flex-[2] py-5 px-10 bg-gray-900 text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-gray-200 hover:bg-primary-600 hover:shadow-primary-100 active:scale-95 transition-all disabled:opacity-50"
+                className="flex-2 py-5 px-10 bg-gray-900 text-white rounded-4xl text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-gray-200 hover:bg-primary-600 hover:shadow-primary-100 active:scale-95 transition-all disabled:opacity-50"
               >
                 {uploading ? (
                   <>
