@@ -17,7 +17,8 @@ import {
   Lock,
   Unlock,
   Eye,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import { ethers } from 'ethers';
 import MedVaultABI from '../abis/MedVaultAbi.json';
@@ -40,6 +41,8 @@ const PatientRecordsTab = () => {
   const [error, setError] = useState(null);
   const [requestingAccess, setRequestingAccess] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
+  const [hasEmergencyAccess, setHasEmergencyAccess] = useState(false);
+  const [emergencyExpiry, setEmergencyExpiry] = useState(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [contract, setContract] = useState(null);
   const [healthIDContract, setHealthIDContract] = useState(null);
@@ -68,11 +71,6 @@ const PatientRecordsTab = () => {
 
         const medVaultABI = MedVaultABI.abi || MedVaultABI;
         const healthIDABI = HealthIDABI.abi || HealthIDABI;
-
-        if (!MEDVAULT_CONTRACT_ADDRESS || !HEALTHID_CONTRACT_ADDRESS) {
-          console.error("Contract addresses missing");
-          return;
-        }
 
         const medVaultContract = new ethers.Contract(
           MEDVAULT_CONTRACT_ADDRESS,
@@ -104,18 +102,30 @@ const PatientRecordsTab = () => {
         return;
 
       try {
+        // Check standard doctor permission
         const access = await contract.doctorPermissions(
           patient.walletAddress,
           account
         );
         setHasAccess(access);
 
-        const pending = await contract.hasPendingRequest(
+        // Check emergency access
+        const emerAccess = await contract.hasEmergencyAccess(patient.walletAddress, account);
+        setHasEmergencyAccess(emerAccess);
+        
+        if (emerAccess) {
+          const expiry = await contract.emergencyAccessExpiry(patient.walletAddress);
+          setEmergencyExpiry(Number(expiry));
+        }
+
+        // Check pending request
+        const pending = await contract.pendingAccessRequests(
           patient.walletAddress,
           account
         );
         setHasPendingRequest(pending);
 
+        // Check HealthID
         const balance = await healthIDContract.balanceOf(
           patient.walletAddress
         );
@@ -134,23 +144,20 @@ const PatientRecordsTab = () => {
       return;
     }
     fetchPatientReports();
-  }, [patient, contract, account, hasAccess]);
+  }, [patient, contract, account, hasAccess, hasEmergencyAccess]);
 
   const fetchPatientReports = async () => {
     if (!contract || !account || !patient?.walletAddress) return;
 
     try {
       setLoading(true);
-      const allowed =
-        account.toLowerCase() === patient.walletAddress.toLowerCase() ||
-        hasAccess;
-
-      if (!allowed) {
-        setError('You do not have permission to view this patient\'s records. Please request access first.');
-        setMedicalReports([]);
-        return;
-      }
-
+      
+      // In the new contract, getReports handles permissions internally
+      // It will return either:
+      // 1. All reports (if full access or emergency access)
+      // 2. Specific shared reports (record-level)
+      // 3. Revert (if no access at all)
+      
       const reports = await contract.getReports(patient.walletAddress);
       setMedicalReports(
         reports.map((ipfsHash, i) => ({
@@ -163,7 +170,12 @@ const PatientRecordsTab = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching reports:', err);
-      setError('Failed to fetch reports. Please try again.');
+      if (err.message.includes("Unauthorized")) {
+        setError('You do not have permission to view this patient\'s records. Please request access or ask for specific record sharing.');
+      } else {
+        setError('Failed to fetch reports. Please ensure you have permission.');
+      }
+      setMedicalReports([]);
     } finally {
       setLoading(false);
     }
@@ -265,7 +277,7 @@ const PatientRecordsTab = () => {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
 
-            {!hasAccess && !hasPendingRequest && (
+            {!hasAccess && !hasEmergencyAccess && !hasPendingRequest && (
               <Button
                 onClick={handleRequestAccess}
                 disabled={requestingAccess}
@@ -279,7 +291,7 @@ const PatientRecordsTab = () => {
                 ) : (
                   <>
                     <Send size={18} />
-                    Request Access
+                    Request Full Access
                   </>
                 )}
               </Button>
@@ -290,6 +302,26 @@ const PatientRecordsTab = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 lg:px-12 py-12 space-y-8">
+        {hasEmergencyAccess && (
+          <div className="p-6 bg-danger-50 border-2 border-danger-100 rounded-3xl flex items-center justify-between shadow-lg shadow-danger-100/20 animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white rounded-2xl text-danger-500 shadow-sm">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <p className="text-danger-900 font-black uppercase tracking-widest text-sm">Emergency Access Active</p>
+                <p className="text-danger-700 font-bold text-xs">You have full temporary access to this patient's records.</p>
+              </div>
+            </div>
+            {emergencyExpiry && (
+              <div className="text-right">
+                <p className="text-[10px] font-black text-danger-400 uppercase tracking-widest">Expires At</p>
+                <p className="text-sm font-black text-danger-700">{new Date(emergencyExpiry * 1000).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Patient Information Card */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-8 space-y-6">
@@ -301,191 +333,119 @@ const PatientRecordsTab = () => {
                 <div>
                   <h2 className="text-2xl font-black text-gray-900">{patient.name}</h2>
                   <p className="text-gray-500 font-medium">{patient.email}</p>
-                  {patient.age && (
-                    <p className="text-sm text-gray-400 mt-1">Age: {patient.age} years</p>
-                  )}
                 </div>
               </div>
-
-              <div className="text-right">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-gray-200">
-                  <Shield size={18} className="text-gray-600" />
-                  <span className={`font-black text-sm ${
-                    hasAccess ? 'text-success-600' : hasPendingRequest ? 'text-warning-600' : 'text-gray-600'
-                  }`}>
-                    {hasAccess ? 'Access Granted' : hasPendingRequest ? 'Pending Request' : 'Access Required'}
-                  </span>
+              <div className="flex flex-col items-end gap-2">
+                <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                  hasAccess || hasEmergencyAccess ? 'bg-success-50 text-success-600 border border-success-100' : 'bg-warning-50 text-warning-600 border border-warning-100'
+                }`}>
+                  {hasAccess || hasEmergencyAccess ? <Unlock size={14} /> : <Lock size={14} />}
+                  {hasAccess ? 'Full Access' : hasEmergencyAccess ? 'Emergency Access' : 'Limited Access'}
                 </div>
+                {hasPendingRequest && !hasAccess && (
+                  <div className="px-4 py-2 bg-primary-50 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-primary-100">
+                    <Clock size={14} /> Pending Approval
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Patient Details Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Wallet Address</p>
-                <div className="flex items-center gap-2">
-                  <Wallet size={16} className="text-primary-500" />
-                  <p className="text-sm font-bold text-gray-700 truncate">{patient.walletAddress?.slice(0, 10)}...</p>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Health ID</p>
-                <div className="flex items-center gap-2">
-                  <Shield size={16} className={userHealthID ? 'text-success-500' : 'text-gray-300'} />
-                  <p className="text-sm font-bold text-gray-700">{userHealthID || 'Not Available'}</p>
-                </div>
-              </div>
-
-              {patient.condition && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Condition</p>
-                  <p className="text-sm font-bold text-gray-700">{patient.condition}</p>
-                </div>
-              )}
-
-              {patient.phone && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Phone</p>
-                  <p className="text-sm font-bold text-gray-700">{patient.phone}</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Access Status Card */}
-        {!hasAccess && (
-          <div className={`rounded-3xl border-2 p-8 flex items-start gap-4 ${
-            hasPendingRequest
-              ? 'bg-warning-50 border-warning-200'
-              : 'bg-danger-50 border-danger-200'
-          }`}>
-            <div className={`p-3 rounded-xl ${
-              hasPendingRequest ? 'bg-warning-100' : 'bg-danger-100'
-            }`}>
-              {hasPendingRequest ? (
-                <Clock size={24} className="text-warning-600" />
-              ) : (
-                <Lock size={24} className="text-danger-600" />
-              )}
-            </div>
-            <div className="flex-grow">
-              <h3 className={`font-black text-lg ${
-                hasPendingRequest ? 'text-warning-900' : 'text-danger-900'
-              }`}>
-                {hasPendingRequest ? 'Access Request Pending' : 'Access Required'}
-              </h3>
-              <p className={`text-sm font-medium mt-1 ${
-                hasPendingRequest ? 'text-warning-700' : 'text-danger-700'
-              }`}>
-                {hasPendingRequest
-                  ? 'Your access request has been sent to the patient. They will receive a notification and can approve or deny your request.'
-                  : 'You need to request access to view this patient\'s medical records. Click the "Request Access" button above to send a request.'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Medical Reports Section */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-gray-100">
-            <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-              <FileText size={28} className="text-primary-500" />
-              Medical Reports
+        {/* Records Grid */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+              <FileText className="text-primary-500" />
+              Available Records
+              <span className="ml-2 px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-bold">
+                {medicalReports.length}
+              </span>
             </h3>
           </div>
 
-          <div className="p-8">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="animate-spin text-primary-500" size={48} />
-                <p className="text-gray-500 font-medium">Loading medical reports...</p>
-              </div>
-            ) : error ? (
-              <div className="flex items-start gap-4 p-6 bg-danger-50 border border-danger-200 rounded-2xl">
-                <AlertCircle size={24} className="text-danger-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="font-black text-danger-900">Error Loading Reports</h4>
-                  <p className="text-sm text-danger-700 mt-1">{error}</p>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white p-8 rounded-3xl border border-gray-100 animate-pulse space-y-4">
+                  <div className="w-12 h-12 bg-gray-100 rounded-2xl"></div>
+                  <div className="h-6 bg-gray-100 rounded-lg w-3/4"></div>
+                  <div className="h-4 bg-gray-100 rounded-lg w-1/2"></div>
                 </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="bg-white p-12 rounded-[3rem] border border-gray-100 text-center space-y-4">
+              <div className="w-16 h-16 bg-warning-50 text-warning-500 rounded-full flex items-center justify-center mx-auto">
+                <Shield size={32} />
               </div>
-            ) : medicalReports.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText size={40} className="text-gray-300" />
-                </div>
-                <h4 className="text-xl font-black text-gray-900 mb-2">No Medical Reports Found</h4>
-                <p className="text-gray-500 font-medium">There are no medical reports available for this patient yet.</p>
+              <h4 className="text-xl font-black text-gray-900">Access Restricted</h4>
+              <p className="text-gray-500 max-w-md mx-auto font-medium">{error}</p>
+            </div>
+          ) : medicalReports.length === 0 ? (
+            <div className="bg-white p-12 rounded-[3rem] border border-gray-100 text-center space-y-4">
+              <div className="w-16 h-16 bg-gray-50 text-gray-300 rounded-full flex items-center justify-center mx-auto">
+                <FileText size={32} />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {medicalReports.map((report, i) => (
-                  <div
-                    key={i}
-                    className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200 hover:border-primary-300 hover:shadow-lg transition-all group"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center group-hover:bg-primary-50 transition-colors">
-                        <FileText size={24} className="text-primary-500" />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleView(report.ipfsHash)}
-                          className="p-2 hover:bg-white rounded-lg transition-colors"
-                          title="View report"
-                        >
-                          <Eye size={20} className="text-gray-600 hover:text-primary-600" />
-                        </button>
-                        <button
-                          onClick={() => handleDownload(report.ipfsHash, report.fileName)}
-                          className="p-2 hover:bg-white rounded-lg transition-colors"
-                          title="Download report"
-                        >
-                          <Download size={20} className="text-gray-600 hover:text-primary-600" />
-                        </button>
-                      </div>
+              <h4 className="text-xl font-black text-gray-900">No Records Found</h4>
+              <p className="text-gray-500 font-medium">This patient hasn't shared any records with you yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {medicalReports.map((report, index) => (
+                <div key={index} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:border-primary-100 transition-all duration-300 group">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
+                      <FileText size={28} />
                     </div>
-
-                    <h4 className="font-black text-gray-900 mb-2">{report.fileName}</h4>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{report.description}</p>
-
-                    <div className="space-y-2 pt-4 border-t border-gray-200">
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar size={14} />
-                        <span>{report.date}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500 break-all">
-                        <Lock size={14} />
-                        <span className="font-mono">{report.ipfsHash.slice(0, 20)}...</span>
-                      </div>
+                    <div className="px-3 py-1 bg-gray-50 text-gray-400 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                      IPFS
                     </div>
-
-
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  
+                  <h4 className="text-lg font-black text-gray-900 mb-2 group-hover:text-primary-600 transition-colors">{report.fileName}</h4>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6">
+                    <Calendar size={14} /> {report.date}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => handleView(report.ipfsHash)}
+                      disabled={decrypting}
+                      className="flex items-center justify-center gap-2 py-3 bg-gray-50 text-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white transition-all"
+                    >
+                      {decrypting ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />} View
+                    </button>
+                    <button
+                      onClick={() => handleDownload(report.ipfsHash, report.fileName)}
+                      className="flex items-center justify-center gap-2 py-3 bg-primary-50 text-primary-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-600 hover:text-white transition-all"
+                    >
+                      <Download size={14} /> Download
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 
+      {/* Viewing Modal */}
       {viewingReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
-              <div className="space-y-2">
-                <h3 className="text-4xl font-black text-gray-900 tracking-tighter">View Record</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Decrypted Content</p>
-              </div>
-              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-[2rem] transition-all active:scale-90">
-                <X size={32} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-xl">
+          <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+              <h3 className="text-2xl font-black text-gray-900">Decrypted Record</h3>
+              <button onClick={() => setViewingReport(null)} className="p-3 hover:bg-gray-100 rounded-2xl transition-colors">
+                <X size={24} />
               </button>
             </div>
-            <div className="p-12 max-h-[70vh] overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-8 rounded-3xl border border-gray-100 text-gray-700">
-                {decryptedContent}
-              </pre>
+            <div className="p-8">
+              <div className="bg-gray-50 p-8 rounded-3xl border border-gray-100 max-h-[60vh] overflow-y-auto">
+                <pre className="text-sm font-bold text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
+                  {decryptedContent}
+                </pre>
+              </div>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import HealthRecordsTab from '../components/HealthRecordsTab';
 import { AccessRequestsPanel } from '../components/AccessRequest';
 import GuardianManagement from '../components/GuardianManagement';
 import ImageAnalyzer from '../components/ImageAnalyzer';
+import EmergencyBanner from '../components/EmergencyBanner';
 
 const PatientDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -105,6 +106,8 @@ const PatientDashboard = () => {
           <div className="min-h-[600px]">
             {renderContent()}
           </div>
+
+          <EmergencyBanner />
 
           <footer className="mt-32 pt-16 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-8 opacity-40 hover:opacity-100 transition-opacity duration-500">
             <div className="flex items-center gap-3">

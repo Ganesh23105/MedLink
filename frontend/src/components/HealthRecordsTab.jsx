@@ -7,16 +7,19 @@ import {
   X,
   Loader2,
   Shield,
-  HardDrive
+  HardDrive,
+  Share2,
+  User,
+  Check,
+  Search
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
+import axios from 'axios';
 import { useMedLink } from "../context/BlockChainContext";
 import {
   uploadEncryptedFile,
   fetchAndDecryptFile,
   createDownloadableUrl,
-  downloadFile,
-  viewDecryptedImage,
   downloadDecryptedFile,
 } from "../utils/ipfsUtils";
 import { Button } from "./button";
@@ -29,6 +32,9 @@ const HealthRecordsTab = () => {
     uploadReport,
     fetchMedicalReports,
     userHealthID,
+    grantRecordAccess,
+    revokeRecordAccess,
+    checkRecordPermission
   } = useMedLink();
 
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -43,6 +49,13 @@ const HealthRecordsTab = () => {
   const [decryptedMimeType, setDecryptedMimeType] = useState("");
   const fileInputRef = useRef(null);
 
+  // Sharing state
+  const [sharingReport, setSharingReport] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sharingStatus, setSharingStatus] = useState({}); // doctorAddress -> boolean
+
   useEffect(() => {
     if (account && medicalReports.length === 0) {
       fetchMedicalReports();
@@ -56,6 +69,57 @@ const HealthRecordsTab = () => {
       );
     }
   }, [account]);
+
+  const fetchDoctors = async () => {
+    try {
+      setLoadingDoctors(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get("http://localhost:5000/api/auth/doctors", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDoctors(response.data);
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
+  const openShareModal = async (ipfsHash) => {
+    setSharingReport(ipfsHash);
+    await fetchDoctors();
+    
+    // Check current permissions for each doctor
+    const status = {};
+    for (const doc of doctors) {
+      if (doc.walletAddress) {
+        const hasAccess = await checkRecordPermission(account, doc.walletAddress, ipfsHash);
+        status[doc.walletAddress] = hasAccess;
+      }
+    }
+    setSharingStatus(status);
+  };
+
+  const toggleShare = async (doctorAddress) => {
+    if (!sharingReport) return;
+    
+    try {
+      const isCurrentlyShared = sharingStatus[doctorAddress];
+      if (isCurrentlyShared) {
+        await revokeRecordAccess(doctorAddress, sharingReport);
+      } else {
+        await grantRecordAccess(doctorAddress, sharingReport);
+      }
+      
+      setSharingStatus(prev => ({
+        ...prev,
+        [doctorAddress]: !isCurrentlyShared
+      }));
+    } catch (error) {
+      console.error("Error toggling share:", error);
+      alert("Failed to update sharing permission");
+    }
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -117,7 +181,6 @@ const HealthRecordsTab = () => {
 
   const handleDownloadReport = async (ipfsHash, fileName) => {
     try {
-      // Use the helper that handles both binary and text
       await downloadDecryptedFile(ipfsHash, encryptionKey, fileName);
     } catch (error) {
       console.error("Download error:", error);
@@ -131,11 +194,9 @@ const HealthRecordsTab = () => {
       const result = await fetchAndDecryptFile(ipfsHash, encryptionKey);
       
       if (result.isBinary) {
-        // For binary files (images, PDFs), open in a new tab
         const url = createDownloadableUrl(result.data, result.mimeType);
         window.open(url, "_blank");
       } else {
-        // For text files, show in the modal
         setDecryptedContent(result.data);
         setDecryptedMimeType(result.mimeType);
         setViewingReport(ipfsHash);
@@ -148,18 +209,10 @@ const HealthRecordsTab = () => {
     }
   };
 
-  const getExtensionFromMime = (mime) => {
-    if (!mime) return "bin";
-    if (mime.includes("png")) return "png";
-    if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
-    if (mime.includes("pdf")) return "pdf";
-    if (mime.includes("text/plain")) return "txt";
-    if (mime.includes("text/html")) return "html";
-    if (mime.includes("application/msword") || mime.includes("officedocument.wordprocessingml")) return "docx";
-    if (mime.includes("application/vnd.ms-excel") || mime.includes("officedocument.spreadsheetml")) return "xlsx";
-    if (mime.includes("application/json")) return "json";
-    return "bin";
-  };
+  const filteredDoctors = doctors.filter(doc => 
+    doc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.walletAddress?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!account) {
     return (
@@ -221,8 +274,17 @@ const HealthRecordsTab = () => {
                 <div className="w-16 h-16 bg-gray-50 text-primary-600 rounded-3xl flex items-center justify-center shadow-inner group-hover:bg-primary-600 group-hover:text-white group-hover:rotate-6 transition-all duration-500">
                   <FileText size={32} />
                 </div>
-                <div className="px-5 py-2 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 group-hover:bg-white transition-colors">
-                  ENTRY #{index + 1}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => openShareModal(ipfsHash)}
+                    className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all"
+                    title="Share Record"
+                  >
+                    <Share2 size={18} />
+                  </button>
+                  <div className="px-5 py-2 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 group-hover:bg-white transition-colors">
+                    ENTRY #{index + 1}
+                  </div>
                 </div>
               </div>
               
@@ -259,150 +321,186 @@ const HealthRecordsTab = () => {
         )}
       </div>
 
-      {viewingReport && (
-        <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
-              <div className="space-y-2">
-                <h3 className="text-4xl font-black text-gray-900 tracking-tighter">View Record</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Decrypted Content</p>
+      {/* Share Modal */}
+      {sharingReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-10 border-b border-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black text-gray-900 tracking-tight">Share Record</h3>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Grant record-level permissions to doctors</p>
               </div>
-              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-4xl transition-all active:scale-90">
-                <X size={32} />
+              <button
+                onClick={() => setSharingReport(null)}
+                className="p-4 hover:bg-gray-100 rounded-2xl transition-colors text-gray-400 hover:text-gray-900"
+              >
+                <X size={24} />
               </button>
             </div>
-            <div className="p-12 max-h-[70vh] overflow-y-auto">
-              <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-8 rounded-3xl border border-gray-100 text-gray-700">
-                {decryptedContent}
-              </pre>
+            
+            <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input 
+                  type="text" 
+                  placeholder="Search doctor by name or address..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-primary-100 outline-none transition-all font-bold"
+                />
+              </div>
+
+              <div className="space-y-4">
+                {loadingDoctors ? (
+                  <div className="flex flex-col items-center py-10">
+                    <Loader2 className="animate-spin text-primary-500 mb-4" size={32} />
+                    <p className="text-gray-400 font-bold">Fetching specialists...</p>
+                  </div>
+                ) : filteredDoctors.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-gray-400 font-bold">No doctors found</p>
+                  </div>
+                ) : (
+                  filteredDoctors.map(doctor => (
+                    <div key={doctor._id} className="flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-transparent hover:border-primary-100 transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-primary-600 font-black shadow-sm group-hover:scale-110 transition-transform">
+                          {doctor.name?.charAt(0) || <User size={20} />}
+                        </div>
+                        <div>
+                          <p className="font-black text-gray-900">{doctor.name}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{doctor.walletAddress?.slice(0, 10)}...{doctor.walletAddress?.slice(-4)}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleShare(doctor.walletAddress)}
+                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                          sharingStatus[doctor.walletAddress]
+                            ? "bg-success-50 text-success-600 border border-success-100"
+                            : "bg-gray-900 text-white hover:bg-primary-600"
+                        }`}
+                      >
+                        {sharingStatus[doctor.walletAddress] ? (
+                          <span className="flex items-center gap-2"><Check size={14} /> Shared</span>
+                        ) : "Share"}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {showUploadModal && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-2xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
             <div className="p-12 border-b border-gray-50 flex items-center justify-between">
-              <div className="space-y-2">
-                <h3 className="text-4xl font-black text-gray-900 tracking-tighter">Vault Encryption</h3>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">End-to-End Secure Protocol</p>
+              <div>
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">New Vault Entry</h3>
+                <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Secure clinical data upload</p>
               </div>
-              <button onClick={() => setShowUploadModal(false)} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-4xl transition-all active:scale-90">
-                <X size={32} />
-              </button>
-            </div>
-            
-            <div className="p-12 space-y-10 max-h-[70vh] overflow-y-auto scrollbar-hide">
-              <div 
-                className={`border-4 border-dashed rounded-[3rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 relative group/drop ${selectedFile ? 'border-primary-500 bg-primary-50 shadow-2xl shadow-primary-50' : 'border-gray-100 bg-gray-50/50 hover:border-primary-400 hover:bg-white'}`}
-                onClick={() => fileInputRef.current.click()}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl transition-all duration-500 group-hover/drop:scale-110 group-hover/drop:rotate-6 ${selectedFile ? 'bg-primary-600 text-white' : 'bg-white text-gray-300'}`}>
-                  <Upload size={40} />
-                </div>
-                {selectedFile ? (
-                  <div className="text-center">
-                    <p className="text-xl font-black text-gray-900 truncate max-w-80 tracking-tight">{selectedFile.name}</p>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-2">Payload: {(selectedFile.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-xl font-black text-gray-700 tracking-tight">Drop clinical document</p>
-                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em] mt-3">PDF • JPG • PNG • MAX 10MB</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-8">
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Classification</label>
-                  <select
-                    value={reportType}
-                    onChange={(e) => setReportType(e.target.value)}
-                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none appearance-none cursor-pointer"
-                  >
-                    <option value="">Select record type...</option>
-                    <option>Lab Results</option>
-                    <option>X-Ray / Imaging</option>
-                    <option>Blood Analysis</option>
-                    <option>ECG / Cardiac</option>
-                    <option>Prescription</option>
-                    <option>Surgical Report</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Clinical Context</label>
-                  <textarea
-                    value={reportDescription}
-                    onChange={(e) => setReportDescription(e.target.value)}
-                    rows="3"
-                    placeholder="Enter diagnostic details or medical context..."
-                    className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300 tracking-tight"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Vault Passphrase</label>
-                  <div className="relative group">
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-primary-500 transition-colors">
-                      <Shield size={24} />
-                    </div>
-                    <input
-                      type="password"
-                      value={encryptionKey}
-                      onChange={(e) => setEncryptionKey(e.target.value)}
-                      placeholder="Enter security key"
-                      className="w-full pl-16 pr-8 py-6 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-black focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none placeholder:text-gray-300"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-12 bg-gray-50 border-t border-gray-100 flex gap-6">
-              <button 
+              <button
                 onClick={() => setShowUploadModal(false)}
-                className="flex-1 py-5 px-8 rounded-4xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-all"
+                className="p-5 hover:bg-gray-100 rounded-[2rem] transition-colors text-gray-400 hover:text-gray-900"
               >
-                Discard
+                <X size={28} />
               </button>
-              <button 
-                onClick={handleUpload} 
-                disabled={uploading || !selectedFile || !reportType || !encryptionKey}
-                className="flex-2 py-5 px-10 bg-gray-900 text-white rounded-4xl text-sm font-black uppercase tracking-[0.2em] shadow-2xl shadow-gray-200 hover:bg-primary-600 hover:shadow-primary-100 active:scale-95 transition-all disabled:opacity-50"
+            </div>
+
+            <div className="p-12 space-y-10">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Report Classification</label>
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-[2rem] text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Select Category</option>
+                  <option value="Blood Test">Blood Analysis</option>
+                  <option value="Radiology">Radiology (X-Ray/MRI)</option>
+                  <option value="Prescription">Prescription</option>
+                  <option value="Cardiology">Cardiology (ECG)</option>
+                  <option value="Pathology">Pathology Report</option>
+                  <option value="Other">Other Clinical Data</option>
+                </select>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Clinical Context</label>
+                <textarea
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Enter clinical observations or notes..."
+                  className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2.5rem] text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all min-h-[160px] resize-none"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Secure File</label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-10 bg-gray-50 border-2 border-dashed border-gray-200 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer hover:bg-primary-50/30 hover:border-primary-200 transition-all group"
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-gray-300 mb-4 shadow-sm group-hover:scale-110 group-hover:text-primary-500 transition-all">
+                    <Upload size={28} />
+                  </div>
+                  <p className="text-lg font-black text-gray-900">
+                    {selectedFile ? selectedFile.name : "Select Clinical File"}
+                  </p>
+                  <p className="text-gray-400 font-bold text-xs mt-1">MAX 10MB • PDF, JPG, PNG, TXT</p>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleUpload}
+                disabled={uploading || !selectedFile || !reportType}
+                className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {uploading ? (
                   <>
-                    <Loader2 size={24} className="animate-spin inline-block mr-3" /> Encrypting...
+                    <Loader2 size={20} className="animate-spin" /> Securing on Chain...
                   </>
                 ) : (
                   <>
-                    <Upload size={24} className="inline-block mr-3" /> Finalize Upload
+                    <Shield size={20} className="text-primary-400" /> Commit to Vault
                   </>
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {loading && (
-        <div className="fixed bottom-8 right-8 bg-white px-6 py-4 rounded-2xl shadow-2xl border border-gray-100 flex items-center gap-3 z-50 animate-in slide-in-from-right-8">
-          <div className="w-10 h-10 bg-primary-50 rounded-full flex items-center justify-center">
-            <Loader2 size={20} className="text-primary-600 animate-spin" />
-          </div>
-          <div>
-            <p className="text-sm font-black text-gray-900">Blockchain Syncing</p>
-            <p className="text-xs text-gray-500 font-medium">Updating your records...</p>
+      {viewingReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
+              <div>
+                <h3 className="text-3xl font-black text-gray-900 tracking-tight">Clinical Decryption</h3>
+                <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Authenticated viewing session</p>
+              </div>
+              <button
+                onClick={() => setViewingReport(null)}
+                className="p-5 hover:bg-gray-100 rounded-[2rem] transition-colors text-gray-400 hover:text-gray-900"
+              >
+                <X size={28} />
+              </button>
+            </div>
+            <div className="p-12">
+              <div className="bg-gray-50 p-10 rounded-[3rem] border border-gray-100 shadow-inner max-h-[50vh] overflow-y-auto">
+                <pre className="text-lg font-bold text-gray-700 whitespace-pre-wrap leading-relaxed font-mono">
+                  {decryptedContent}
+                </pre>
+              </div>
+            </div>
           </div>
         </div>
       )}
