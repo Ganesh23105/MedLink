@@ -6,6 +6,7 @@ import os
 import json
 import logging
 import joblib
+import pandas as pd
 import numpy as np
 import statistics
 from langchain_groq import ChatGroq
@@ -121,18 +122,22 @@ def predict_disease_ml(mapped_symptoms: List[str]) -> dict:
     if not mapped_symptoms:
         return {"error": "No valid symptoms identified for ML model"}
 
-    # Create input vector
-    input_data = [0] * len(symptom_index)
+    # Create input vector with feature names to avoid warnings
+    input_dict = {symptom: [0] for symptom in metadata["symptoms_list"]}
     for symptom in mapped_symptoms:
-        if symptom in symptom_index:
-            input_data[symptom_index[symptom]] = 1
+        # Map the capitalized symptom back to the underscore version used in training
+        for original_symptom in metadata["symptoms_list"]:
+            normalized = " ".join([i.capitalize() for i in original_symptom.split("_")])
+            if normalized == symptom:
+                input_dict[original_symptom] = [1]
+                break
     
-    input_data = np.array(input_data).reshape(1, -1)
+    input_df = pd.DataFrame(input_dict)
     
     # Get predictions from each model
-    rf_pred = encoder_classes[rf_model.predict(input_data)[0]]
-    nb_pred = encoder_classes[nb_model.predict(input_data)[0]]
-    svm_pred = encoder_classes[svm_model.predict(input_data)[0]]
+    rf_pred = encoder_classes[rf_model.predict(input_df)[0]]
+    nb_pred = encoder_classes[nb_model.predict(input_df)[0]]
+    svm_pred = encoder_classes[svm_model.predict(input_df)[0]]
     
     # Final prediction using mode
     final_pred = statistics.mode([rf_pred, nb_pred, svm_pred])
@@ -202,9 +207,11 @@ async def process_text_symptoms(request: TextSymptomRequest):
         # 3. Get Gen AI Detailed Analysis
         gen_ai_analysis = analyze_symptoms_genai(request.symptoms)
         
+        # Ensure the response structure matches what the frontend expects
         return {
             "ml_predictions": ml_results,
             "gen_ai_analysis": gen_ai_analysis,
+            "analysis": gen_ai_analysis, # Fallback for older frontend versions
             "input_symptoms": request.symptoms
         }
     
