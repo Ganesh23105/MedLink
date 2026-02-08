@@ -104,11 +104,11 @@ describe("MedLink System Test", function () {
       // Second approval (should trigger execution)
       await expect(guardian.connect(guardian2).approveUnlock(patient.address))
         .to.emit(guardian, "UnlockExecuted")
-        .withArgs(patient.address);
+        .withArgs(patient.address, 86400); // Default 24 hours
     });
 
     it("Should grant emergency access in MedVault", async function () {
-      expect(await medVault.emergencyAccessActive(patient.address)).to.be.true;
+      expect(await medVault.emergencyAccessExpiry(patient.address)).to.be.gt(0);
       expect(await medVault.emergencyAccessPermissions(patient.address, guardian1.address)).to.be.true;
     });
   });
