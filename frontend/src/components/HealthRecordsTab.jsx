@@ -39,6 +39,7 @@ const HealthRecordsTab = () => {
   const [viewingReport, setViewingReport] = useState(null);
   const [decryptedContent, setDecryptedContent] = useState("");
   const [decrypting, setDecrypting] = useState(false);
+  const [decryptedMimeType, setDecryptedMimeType] = useState("");
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -115,12 +116,34 @@ const HealthRecordsTab = () => {
 
   const handleDownloadReport = async (ipfsHash, fileName) => {
     try {
-      const result = await fetchAndDecryptFile(ipfsHash, "12345678");
-      const url = createDownloadableUrl(result.data, result.mimeType);
-      downloadFile(url, `${fileName}.${getExtensionFromMime(result.mimeType)}`);
+      // Use the helper that handles both binary and text
+      await downloadDecryptedFile(ipfsHash, encryptionKey, fileName);
     } catch (error) {
       console.error("Download error:", error);
       alert("Failed to download the report");
+    }
+  };
+
+  const handleViewReport = async (ipfsHash) => {
+    try {
+      setDecrypting(true);
+      const result = await fetchAndDecryptFile(ipfsHash, encryptionKey);
+      
+      if (result.isBinary) {
+        // For binary files (images, PDFs), open in a new tab
+        const url = createDownloadableUrl(result.data, result.mimeType);
+        window.open(url, "_blank");
+      } else {
+        // For text files, show in the modal
+        setDecryptedContent(result.data);
+        setDecryptedMimeType(result.mimeType);
+        setViewingReport(ipfsHash);
+      }
+    } catch (error) {
+      console.error("View error:", error);
+      alert("Failed to view the report");
+    } finally {
+      setDecrypting(false);
     }
   };
 
@@ -129,7 +152,11 @@ const HealthRecordsTab = () => {
     if (mime.includes("png")) return "png";
     if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
     if (mime.includes("pdf")) return "pdf";
-    if (mime.includes("txt")) return "txt";
+    if (mime.includes("text/plain")) return "txt";
+    if (mime.includes("text/html")) return "html";
+    if (mime.includes("application/msword") || mime.includes("officedocument.wordprocessingml")) return "docx";
+    if (mime.includes("application/vnd.ms-excel") || mime.includes("officedocument.spreadsheetml")) return "xlsx";
+    if (mime.includes("application/json")) return "json";
     return "bin";
   };
 
@@ -208,12 +235,11 @@ const HealthRecordsTab = () => {
 
               <div className="grid grid-cols-2 gap-5 mt-10 relative z-10">
                 <button
-                  onClick={() =>
-                    viewDecryptedImage(ipfsHash, encryptionKey, "image/jpeg")
-                  }
+                  onClick={() => handleViewReport(ipfsHash)}
+                  disabled={decrypting}
                   className="flex items-center justify-center gap-3 py-4 bg-gray-50 text-gray-700 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] hover:bg-gray-900 hover:text-white transition-all active:scale-95 border border-transparent hover:border-gray-900"
                 >
-                  <Eye size={18} /> View
+                  {decrypting ? <Loader2 size={18} className="animate-spin" /> : <Eye size={18} />} View
                 </button>
                 <button
                   onClick={() =>
@@ -231,6 +257,27 @@ const HealthRecordsTab = () => {
           ))
         )}
       </div>
+
+      {viewingReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
+              <div className="space-y-2">
+                <h3 className="text-4xl font-black text-gray-900 tracking-tighter">View Record</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Decrypted Content</p>
+              </div>
+              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-[2rem] transition-all active:scale-90">
+                <X size={32} />
+              </button>
+            </div>
+            <div className="p-12 max-h-[70vh] overflow-y-auto">
+              <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-8 rounded-3xl border border-gray-100 text-gray-700">
+                {decryptedContent}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showUploadModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">

@@ -301,27 +301,59 @@ export const fetchAndDecryptFile = async (ipfsHash, encryptionKey, originalMimeT
     const content = await response.text();
     
     console.log("Encrypted content preview:", content.substring(0, 100));
-    console.log("Original MIME type:", originalMimeType);
+    
+    // Try to fetch metadata from Pinata to get the original MIME type if not provided
+    let mimeType = originalMimeType;
+    if (!mimeType && PINATA_JWT) {
+      try {
+        const metadataResponse = await fetch(`https://api.pinata.cloud/data/pinList?hashContains=${ipfsHash}`, {
+          headers: { Authorization: `Bearer ${PINATA_JWT}` }
+        });
+        if (metadataResponse.ok) {
+          const metadata = await metadataResponse.json();
+          if (metadata.rows && metadata.rows.length > 0) {
+            mimeType = metadata.rows[0].metadata?.keyvalues?.originalMimeType;
+            console.log("Recovered MIME type from Pinata:", mimeType);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch metadata from Pinata:", e);
+      }
+    }
 
-    // Check if content is OpenSSL formatted (starts with "Salted__")
+    // Determine decryption method
+    // If it starts with Salted__, it's definitely the simple CryptoJS.AES.encrypt output (text)
+    // Otherwise, we check if it's base64 and treat as binary with IV
     if (content.startsWith('Salted__')) {
-      // Text file decryption (CryptoJS format)
       console.log("Using text decryption (OpenSSL format)");
       const decryptedText = decryptFile(content, encryptionKey);
       return {
         data: decryptedText,
         isBinary: false,
-        mimeType: originalMimeType || 'text/plain'
+        mimeType: mimeType || 'text/plain'
       };
     } else {
-      // Binary format with IV (Base64 format)
       console.log("Using binary decryption (Base64 format)");
-      const decryptedBuffer = decryptBinaryFile(content, encryptionKey);
-      return {
-        data: decryptedBuffer,
-        isBinary: true,
-        mimeType: originalMimeType || 'application/octet-stream'
-      };
+      try {
+        const decryptedBuffer = decryptBinaryFile(content, encryptionKey);
+        // Even if it's binary data, it might be a text file that was encrypted with the binary method
+        const isActuallyBinary = mimeType ? !mimeType.startsWith('text/') && mimeType !== 'application/json' : true;
+        
+        return {
+          data: decryptedBuffer,
+          isBinary: isActuallyBinary,
+          mimeType: mimeType || 'application/octet-stream'
+        };
+      } catch (e) {
+        // Fallback to text decryption if binary fails
+        console.log("Binary decryption failed, falling back to text decryption");
+        const decryptedText = decryptFile(content, encryptionKey);
+        return {
+          data: decryptedText,
+          isBinary: false,
+          mimeType: mimeType || 'text/plain'
+        };
+      }
     }
   } catch (error) {
     console.error("Fetch/decrypt error:", error);
@@ -395,11 +427,31 @@ export const downloadDecryptedFile = async (ipfsHash, encryptionKey, filename, o
       dataSize: result.data instanceof ArrayBuffer ? result.data.byteLength : result.data.length
     });
     
+    // Determine the correct extension
+    const getExtension = (mime) => {
+      if (!mime) return "";
+      if (mime.includes("png")) return "png";
+      if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+      if (mime.includes("pdf")) return "pdf";
+      if (mime.includes("text/plain")) return "txt";
+      if (mime.includes("text/html")) return "html";
+      if (mime.includes("application/msword") || mime.includes("officedocument.wordprocessingml")) return "docx";
+      if (mime.includes("application/vnd.ms-excel") || mime.includes("officedocument.spreadsheetml")) return "xlsx";
+      if (mime.includes("application/json")) return "json";
+      return "";
+    };
+
+    const extension = getExtension(result.mimeType);
+    let finalFilename = filename;
+    if (extension && !filename.toLowerCase().endsWith("." + extension)) {
+      finalFilename = `${filename}.${extension}`;
+    }
+    
     // Create downloadable URL using the actual decrypted data
     const downloadUrl = createDownloadableUrl(result.data, result.mimeType);
     
     // Trigger download
-    downloadFile(downloadUrl, filename);
+    downloadFile(downloadUrl, finalFilename);
     
     return result;
   } catch (error) {

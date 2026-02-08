@@ -15,12 +15,19 @@ import {
   Loader2,
   CheckCircle2,
   Lock,
-  Unlock
+  Unlock,
+  Eye,
+  X
 } from 'lucide-react';
 import { ethers } from 'ethers';
 import MedVaultABI from '../abis/MedVaultAbi.json';
 import HealthIDABI from '../abis/HealthIdAbi.json';
 import { Button } from './button';
+import {
+  fetchAndDecryptFile,
+  createDownloadableUrl,
+  downloadDecryptedFile
+} from "../utils/ipfsUtils";
 
 const PatientRecordsTab = () => {
   const location = useLocation();
@@ -38,6 +45,10 @@ const PatientRecordsTab = () => {
   const [healthIDContract, setHealthIDContract] = useState(null);
   const [account, setAccount] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewingReport, setViewingReport] = useState(null);
+  const [decryptedContent, setDecryptedContent] = useState("");
+  const [decrypting, setDecrypting] = useState(false);
+  const [encryptionKey, setEncryptionKey] = useState("12345678");
 
   const MEDVAULT_CONTRACT_ADDRESS = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
   const HEALTHID_CONTRACT_ADDRESS = import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS;
@@ -180,7 +191,32 @@ const PatientRecordsTab = () => {
   };
 
   const handleDownload = async (hash, name) => {
-    window.open(`https://ipfs.io/ipfs/${hash}`, '_blank');
+    try {
+      await downloadDecryptedFile(hash, encryptionKey, name);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download the report');
+    }
+  };
+
+  const handleView = async (hash) => {
+    try {
+      setDecrypting(true);
+      const result = await fetchAndDecryptFile(hash, encryptionKey);
+      
+      if (result.isBinary) {
+        const url = createDownloadableUrl(result.data, result.mimeType);
+        window.open(url, "_blank");
+      } else {
+        setDecryptedContent(result.data);
+        setViewingReport(hash);
+      }
+    } catch (err) {
+      console.error('View error:', err);
+      alert('Failed to view the report');
+    } finally {
+      setDecrypting(false);
+    }
   };
 
   if (!patient) {
@@ -393,13 +429,22 @@ const PatientRecordsTab = () => {
                       <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center group-hover:bg-primary-50 transition-colors">
                         <FileText size={24} className="text-primary-500" />
                       </div>
-                      <button
-                        onClick={() => handleDownload(report.ipfsHash, report.fileName)}
-                        className="p-2 hover:bg-white rounded-lg transition-colors"
-                        title="Download report"
-                      >
-                        <Download size={20} className="text-gray-600 hover:text-primary-600" />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleView(report.ipfsHash)}
+                          className="p-2 hover:bg-white rounded-lg transition-colors"
+                          title="View report"
+                        >
+                          <Eye size={20} className="text-gray-600 hover:text-primary-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDownload(report.ipfsHash, report.fileName)}
+                          className="p-2 hover:bg-white rounded-lg transition-colors"
+                          title="Download report"
+                        >
+                          <Download size={20} className="text-gray-600 hover:text-primary-600" />
+                        </button>
+                      </div>
                     </div>
 
                     <h4 className="font-black text-gray-900 mb-2">{report.fileName}</h4>
@@ -430,6 +475,27 @@ const PatientRecordsTab = () => {
           </div>
         </div>
       </main>
+
+      {viewingReport && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
+              <div className="space-y-2">
+                <h3 className="text-4xl font-black text-gray-900 tracking-tighter">View Record</h3>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Decrypted Content</p>
+              </div>
+              <button onClick={() => { setViewingReport(null); setDecryptedContent(""); }} className="p-4 bg-gray-50 text-gray-300 hover:text-gray-900 hover:bg-gray-100 rounded-[2rem] transition-all active:scale-90">
+                <X size={32} />
+              </button>
+            </div>
+            <div className="p-12 max-h-[70vh] overflow-y-auto">
+              <pre className="whitespace-pre-wrap font-mono text-sm bg-gray-50 p-8 rounded-3xl border border-gray-100 text-gray-700">
+                {decryptedContent}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
