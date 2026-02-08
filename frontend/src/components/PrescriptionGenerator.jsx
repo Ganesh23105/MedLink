@@ -115,7 +115,7 @@ const PrescriptionGenerator = () => {
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Prescription Generator</h2>
           <p className="text-gray-500 font-medium text-xl leading-relaxed">"The art of healing comes from nature, not from the physician." — Paracelsus. Create precise digital prescriptions.</p>
         </div>
-        <div className="flex items-center gap-3 px-6 py-3 bg-accent-50 text-accent-700 rounded-[2rem] text-xs font-black border border-accent-100 shadow-sm shadow-accent-50">
+        <div className="flex items-center gap-3 px-6 py-3 bg-accent-50 text-accent-700 rounded-4xl text-xs font-black border border-accent-100 shadow-sm shadow-accent-50">
           <FileText size={20} className="text-accent-500" />
           Digital Protocol Active
         </div>
@@ -274,7 +274,7 @@ const PrescriptionGenerator = () => {
                   placeholder="Enter diagnosis details..."
                   value={prescription.diagnosis}
                   onChange={(e) => setPrescription(prev => ({ ...prev, diagnosis: e.target.value }))}
-                  className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-accent-50/50 focus:border-accent-100 transition-all outline-none resize-none"
+                  className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-accent-50/50 focus:border-accent-100 transition-all outline-none resize-none"
                   rows={3}
                 />
               </div>
@@ -284,7 +284,7 @@ const PrescriptionGenerator = () => {
                   placeholder="Advice, diet, or follow-up notes..."
                   value={prescription.notes}
                   onChange={(e) => setPrescription(prev => ({ ...prev, notes: e.target.value }))}
-                  className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-accent-50/50 focus:border-accent-100 transition-all outline-none resize-none"
+                  className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-accent-50/50 focus:border-accent-100 transition-all outline-none resize-none"
                   rows={3}
                 />
               </div>
@@ -298,7 +298,7 @@ const PrescriptionGenerator = () => {
               <Button 
                 onClick={generatePDF} 
                 disabled={isGenerating}
-                className="w-full sm:w-auto px-12 py-5 rounded-[2rem] text-sm font-black uppercase tracking-widest shadow-2xl shadow-accent-100"
+                className="w-full sm:w-auto px-12 py-5 rounded-4xl text-sm font-black uppercase tracking-widest shadow-2xl shadow-accent-100"
               >
                 {isGenerating ? (
                   <Loader2 className="animate-spin mr-3" size={20} />

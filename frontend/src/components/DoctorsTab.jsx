@@ -183,7 +183,7 @@ const DoctorsTab = () => {
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Find Doctors</h2>
           <p className="text-gray-500 font-medium text-xl leading-relaxed">"The physician should be the minister of nature." — Hippocrates. Connect with top-tier specialists globally.</p>
         </div>
-        <div className={`px-6 py-3 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] border-2 shadow-sm ${
+        <div className={`px-6 py-3 rounded-4xl text-[10px] font-black uppercase tracking-[0.2em] border-2 shadow-sm ${
           isConnected ? 'bg-success-50 text-success-700 border-success-100' : 'bg-danger-50 text-danger-700 border-danger-100'
         }`}>
           {isConnected ? '🟢 Neural Network Online' : '🔴 Connection Offline'}
@@ -200,10 +200,10 @@ const DoctorsTab = () => {
             placeholder="Search by name, specialization, or clinical expertise..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-16 pr-6 py-5 bg-gray-50/50 border-2 border-transparent rounded-[2rem] text-lg font-bold focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none shadow-inner"
+            className="w-full pl-16 pr-6 py-5 bg-gray-50/50 border-2 border-transparent rounded-4xl text-lg font-bold focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none shadow-inner"
           />
         </div>
-        <button className="px-10 py-5 bg-gray-900 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest hover:bg-primary-600 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3">
+        <button className="px-10 py-5 bg-gray-900 text-white rounded-4xl font-black text-sm uppercase tracking-widest hover:bg-primary-600 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3">
           <MapPin size={20} /> Proximity Search
         </button>
       </div>

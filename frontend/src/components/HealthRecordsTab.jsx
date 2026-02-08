@@ -14,6 +14,7 @@ import {
   Search
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { useMedLink } from "../context/BlockChainContext";
 import {
@@ -55,10 +56,47 @@ const HealthRecordsTab = () => {
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sharingStatus, setSharingStatus] = useState({}); // doctorAddress -> boolean
+  const [fileAccessMap, setFileAccessMap] = useState({}); // ipfsHash -> array of doctor objects with access
+  const [tooltipInfo, setTooltipInfo] = useState({ visible: false, x: 0, y: 0, items: [] });
+
+  // Fetch access info for all files
+  const fetchFileAccessInfo = async () => {
+    if (!account || medicalReports.length === 0 || doctors.length === 0) return;
+
+    const accessMap = {};
+    for (const ipfsHash of medicalReports) {
+      const accessList = [];
+      for (const doc of doctors) {
+        if (doc.walletAddress) {
+          try {
+            const hasAccess = await checkRecordPermission(account, doc.walletAddress, ipfsHash);
+            if (hasAccess) {
+              accessList.push(doc);
+            }
+          } catch (e) {
+            console.warn(`Could not check access for ${doc.walletAddress}:`, e);
+          }
+        }
+      }
+      accessMap[ipfsHash] = accessList;
+    }
+    setFileAccessMap(accessMap);
+  };
+
+  const showTooltip = (e, ipfsHash) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipInfo({ visible: true, x: rect.right, y: rect.bottom, items: fileAccessMap[ipfsHash] || [] });
+  };
+
+  const hideTooltip = () => setTooltipInfo({ visible: false, x: 0, y: 0, items: [] });
 
   useEffect(() => {
     if (account && medicalReports.length === 0) {
       fetchMedicalReports();
+    }
+    // Also fetch doctors list on mount for access checking
+    if (doctors.length === 0) {
+      fetchDoctors();
     }
   }, [account]);
 
@@ -69,6 +107,19 @@ const HealthRecordsTab = () => {
       );
     }
   }, [account]);
+
+  useEffect(() => {
+    if (medicalReports.length > 0 && doctors.length > 0) {
+      fetchFileAccessInfo();
+    }
+  }, [medicalReports, doctors, account]);
+
+  // Additional effect to ensure file access is fetched when doctors load
+  useEffect(() => {
+    if (doctors.length > 0 && medicalReports.length > 0) {
+      fetchFileAccessInfo();
+    }
+  }, [doctors]);
 
   const fetchDoctors = async () => {
     try {
@@ -98,6 +149,9 @@ const HealthRecordsTab = () => {
       }
     }
     setSharingStatus(status);
+
+    // Refresh file access info when modal opens
+    await fetchFileAccessInfo();
   };
 
   const toggleShare = async (doctorAddress) => {
@@ -115,6 +169,18 @@ const HealthRecordsTab = () => {
         ...prev,
         [doctorAddress]: !isCurrentlyShared
       }));
+
+      // Update fileAccessMap for this file
+      const sharedDoctor = doctors.find(d => d.walletAddress === doctorAddress);
+      setFileAccessMap(prev => ({
+        ...prev,
+        [sharingReport]: isCurrentlyShared 
+          ? prev[sharingReport]?.filter(d => d.walletAddress !== doctorAddress) || []
+          : [...(prev[sharingReport] || []), sharedDoctor]
+      }));
+
+      // Refetch file access info after toggle to ensure sync
+      await fetchFileAccessInfo();
     } catch (error) {
       console.error("Error toggling share:", error);
       alert("Failed to update sharing permission");
@@ -267,24 +333,38 @@ const HealthRecordsTab = () => {
           </div>
         ) : (
           medicalReports.map((ipfsHash, index) => (
-            <div key={index} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 hover:shadow-2xl hover:border-primary-100 transition-all duration-500 group relative overflow-hidden">
+            <div key={index} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-xl shadow-gray-200/40 hover:shadow-2xl hover:border-primary-100 transition-all duration-500 group relative overflow-visible">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-50 transition-all duration-700"></div>
               
               <div className="flex items-start justify-between mb-10 relative z-10">
                 <div className="w-16 h-16 bg-gray-50 text-primary-600 rounded-3xl flex items-center justify-center shadow-inner group-hover:bg-primary-600 group-hover:text-white group-hover:rotate-6 transition-all duration-500">
                   <FileText size={32} />
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => openShareModal(ipfsHash)}
-                    className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all"
-                    title="Share Record"
-                  >
-                    <Share2 size={18} />
-                  </button>
-                  <div className="px-5 py-2 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 group-hover:bg-white transition-colors">
-                    ENTRY #{index + 1}
+                <div className="flex flex-col gap-2 items-end">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => openShareModal(ipfsHash)}
+                      className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-primary-50 hover:text-primary-600 transition-all"
+                      title="Share Record"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                    <div className="px-5 py-2 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] border border-gray-100 group-hover:bg-white transition-colors">
+                      ENTRY #{index + 1}
+                    </div>
                   </div>
+                  {fileAccessMap[ipfsHash] && fileAccessMap[ipfsHash].length > 0 && (
+                    <div className="relative">
+                      <div
+                        onMouseEnter={(e) => showTooltip(e, ipfsHash)}
+                        onMouseLeave={hideTooltip}
+                        className="px-3 py-1 bg-success-50 text-success-600 rounded-xl text-[9px] font-black uppercase tracking-widest border border-success-100 flex items-center gap-1 cursor-default"
+                      >
+                        <Share2 size={12} />
+                        {fileAccessMap[ipfsHash].length} Doctor{fileAccessMap[ipfsHash].length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -323,9 +403,9 @@ const HealthRecordsTab = () => {
 
       {/* Share Modal */}
       {sharingReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <div className="p-10 border-b border-gray-50 flex items-center justify-between">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-h-[90vh] rounded-[3rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-10 border-b border-gray-50 flex items-center justify-between sticky top-0 bg-white z-30">
               <div>
                 <h3 className="text-2xl font-black text-gray-900 tracking-tight">Share Record</h3>
                 <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">Grant record-level permissions to doctors</p>
@@ -338,7 +418,7 @@ const HealthRecordsTab = () => {
               </button>
             </div>
             
-            <div className="p-10 space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="p-10 space-y-8">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                 <input 
@@ -362,7 +442,7 @@ const HealthRecordsTab = () => {
                   </div>
                 ) : (
                   filteredDoctors.map(doctor => (
-                    <div key={doctor._id} className="flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-transparent hover:border-primary-100 transition-all group">
+                    <div key={doctor._id} className="flex items-center justify-between p-6 bg-gray-50 rounded-4xl border border-transparent hover:border-primary-100 transition-all group">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-primary-600 font-black shadow-sm group-hover:scale-110 transition-transform">
                           {doctor.name?.charAt(0) || <User size={20} />}
@@ -394,16 +474,16 @@ const HealthRecordsTab = () => {
       )}
 
       {showUploadModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full max-w-2xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-h-[90vh] rounded-[4rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-12 border-b border-gray-50 flex items-center justify-between sticky top-0 bg-white z-30">
               <div>
                 <h3 className="text-3xl font-black text-gray-900 tracking-tight">New Vault Entry</h3>
                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Secure clinical data upload</p>
               </div>
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="p-5 hover:bg-gray-100 rounded-[2rem] transition-colors text-gray-400 hover:text-gray-900"
+                className="p-5 hover:bg-gray-100 rounded-4xl transition-colors text-gray-400 hover:text-gray-900"
               >
                 <X size={28} />
               </button>
@@ -415,7 +495,7 @@ const HealthRecordsTab = () => {
                 <select
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value)}
-                  className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-[2rem] text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all appearance-none cursor-pointer"
+                  className="w-full px-8 py-5 bg-gray-50 border-2 border-transparent rounded-4xl text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="">Select Category</option>
                   <option value="Blood Test">Blood Analysis</option>
@@ -433,7 +513,7 @@ const HealthRecordsTab = () => {
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
                   placeholder="Enter clinical observations or notes..."
-                  className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2.5rem] text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all min-h-[160px] resize-none"
+                  className="w-full px-8 py-6 bg-gray-50 border-2 border-transparent rounded-[2.5rem] text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all min-h-40 resize-none"
                 />
               </div>
 
@@ -462,7 +542,7 @@ const HealthRecordsTab = () => {
               <Button
                 onClick={handleUpload}
                 disabled={uploading || !selectedFile || !reportType}
-                className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                className="w-full py-6 bg-gray-900 text-white rounded-4xl font-black uppercase tracking-[0.2em] text-sm shadow-2xl hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
               >
                 {uploading ? (
                   <>
@@ -480,16 +560,16 @@ const HealthRecordsTab = () => {
       )}
 
       {viewingReport && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
-          <div className="relative bg-white w-full max-w-4xl rounded-[4rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <div className="p-12 border-b border-gray-50 flex items-center justify-between">
+        <div className="fixed inset-0 z-110 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-2xl animate-in fade-in duration-500">
+          <div className="relative bg-white w-full max-w-4xl max-h-[90vh] rounded-[4rem] shadow-2xl overflow-y-auto animate-in zoom-in-95 duration-500 border border-white/20">
+            <div className="p-12 border-b border-gray-50 flex items-center justify-between sticky top-0 bg-white z-30">
               <div>
                 <h3 className="text-3xl font-black text-gray-900 tracking-tight">Clinical Decryption</h3>
                 <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Authenticated viewing session</p>
               </div>
               <button
                 onClick={() => setViewingReport(null)}
-                className="p-5 hover:bg-gray-100 rounded-[2rem] transition-colors text-gray-400 hover:text-gray-900"
+                className="p-5 hover:bg-gray-100 rounded-4xl transition-colors text-gray-400 hover:text-gray-900"
               >
                 <X size={28} />
               </button>
@@ -503,6 +583,16 @@ const HealthRecordsTab = () => {
             </div>
           </div>
         </div>
+      )}
+      {tooltipInfo.visible && createPortal(
+        <div style={{ left: tooltipInfo.x, top: tooltipInfo.y, transform: 'translateY(8px)', position: 'fixed', zIndex: 9999 }}>
+          <div className="bg-white p-3 rounded-xl shadow-2xl border border-gray-100 w-48">
+            <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-2">Shared with:</p>
+            {tooltipInfo.items.map(doc => (
+              <div key={doc._id} className="text-[11px] text-gray-700 font-bold mb-1">{doc.name}</div>
+            ))}
+          </div>
+        </div>, document.body
       )}
     </div>
   );

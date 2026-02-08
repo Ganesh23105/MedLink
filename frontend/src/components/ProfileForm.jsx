@@ -237,7 +237,7 @@ export const ProfileForm = () => {
                 onChange={handleInputChange}
                 rows={4}
                 placeholder="Tell us about your medical background and approach..."
-                className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
+                className="w-full px-8 py-6 bg-gray-50 border border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
               />
             </div>
 
@@ -252,7 +252,7 @@ export const ProfileForm = () => {
                     onChange={handleInputChange}
                     rows={3}
                     placeholder="Medical School, Residency..."
-                    className="w-full pl-16 pr-6 py-6 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
+                    className="w-full pl-16 pr-6 py-6 bg-gray-50 border border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
                   />
                 </div>
               </div>
@@ -266,7 +266,7 @@ export const ProfileForm = () => {
                     onChange={handleInputChange}
                     rows={3}
                     placeholder="Board Certifications, Licenses..."
-                    className="w-full pl-16 pr-6 py-6 bg-gray-50 border border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
+                    className="w-full pl-16 pr-6 py-6 bg-gray-50 border border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-4 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none"
                   />
                 </div>
               </div>

@@ -181,7 +181,7 @@ export const PatientsTab = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-grow">
+        <div className="relative grow">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
@@ -283,7 +283,7 @@ export const PatientsTab = () => {
               )}
 
               <div className="flex gap-3 pt-2">
-                <div className="flex-grow">
+                <div className="grow">
                   <ViewRecordsButton patient={patient} />
                 </div>
                 <Button 

@@ -189,7 +189,7 @@ const ChatModal = ({
                         </div>
                       )}
                       <div className={`max-w-[70%] space-y-2`}>
-                        <div className={`p-5 rounded-[2rem] text-sm font-bold shadow-sm ${
+                        <div className={`p-5 rounded-4xl text-sm font-bold shadow-sm ${
                           own 
                             ? 'bg-primary-600 text-white rounded-br-none shadow-primary-100' 
                             : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'
@@ -237,7 +237,7 @@ const ChatModal = ({
                 placeholder={isConnected ? 'Type your message here...' : 'Reconnecting to neural network...'}
                 rows={1}
                 disabled={!isConnected}
-                className="w-full pl-6 pr-16 py-5 bg-gray-50 border-2 border-transparent rounded-[2rem] text-sm font-bold focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none shadow-inner"
+                className="w-full pl-6 pr-16 py-5 bg-gray-50 border-2 border-transparent rounded-4xl text-sm font-bold focus:bg-white focus:ring-8 focus:ring-primary-50/50 focus:border-primary-100 transition-all outline-none resize-none shadow-inner"
               />
               <div className="absolute right-4 bottom-3 flex items-center gap-2">
                 <button className="p-2 text-gray-300 hover:text-primary-500 transition-colors"><Smile size={20} /></button>

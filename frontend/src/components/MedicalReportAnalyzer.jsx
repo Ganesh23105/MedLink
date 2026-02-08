@@ -121,7 +121,7 @@ const MedicalReportAnalyzer = () => {
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Report Analyze</h2>
           <p className="text-gray-500 font-medium text-xl leading-relaxed">"Knowledge is power." — Francis Bacon. Extract deep clinical insights from your medical documents with precision AI.</p>
         </div>
-        <div className="flex items-center gap-3 px-6 py-3 bg-secondary-50 text-secondary-700 rounded-[2rem] text-xs font-black border border-secondary-100 shadow-sm shadow-secondary-50">
+        <div className="flex items-center gap-3 px-6 py-3 bg-secondary-50 text-secondary-700 rounded-4xl text-xs font-black border border-secondary-100 shadow-sm shadow-secondary-50">
           <Activity size={20} className="text-secondary-500" />
           Precision AI Active
         </div>
@@ -143,7 +143,7 @@ const MedicalReportAnalyzer = () => {
         {file ? (
           <div className="space-y-10 animate-in fade-in zoom-in duration-500">
             <div className="flex flex-col items-center">
-              <div className="w-24 h-24 bg-primary-50 text-primary-600 rounded-[2rem] flex items-center justify-center mb-6 shadow-xl group-hover:rotate-6 transition-transform">
+              <div className="w-24 h-24 bg-primary-50 text-primary-600 rounded-4xl flex items-center justify-center mb-6 shadow-xl group-hover:rotate-6 transition-transform">
                 <FileText size={48} />
               </div>
               <p className="text-2xl font-black text-gray-900 tracking-tight">{file.name}</p>
@@ -151,7 +151,7 @@ const MedicalReportAnalyzer = () => {
             </div>
 
             <div className="flex gap-6 justify-center">
-              <Button onClick={analyzeReport} disabled={isAnalyzing} className="px-10 py-5 rounded-[2rem] text-sm font-black uppercase tracking-widest shadow-2xl shadow-primary-100">
+              <Button onClick={analyzeReport} disabled={isAnalyzing} className="px-10 py-5 rounded-4xl text-sm font-black uppercase tracking-widest shadow-2xl shadow-primary-100">
                 {isAnalyzing ? (
                   <>
                     <Loader2 className="animate-spin mr-3" size={20} /> Processing...
@@ -163,7 +163,7 @@ const MedicalReportAnalyzer = () => {
                 )}
               </Button>
 
-              <Button variant="outline" onClick={clearFile} disabled={isAnalyzing} className="px-10 py-5 rounded-[2rem] text-sm font-black uppercase tracking-widest border-2">
+              <Button variant="outline" onClick={clearFile} disabled={isAnalyzing} className="px-10 py-5 rounded-4xl text-sm font-black uppercase tracking-widest border-2">
                 <X size={20} className="mr-3" /> Discard
               </Button>
             </div>
@@ -179,7 +179,7 @@ const MedicalReportAnalyzer = () => {
             </div>
 
             <div className="flex flex-col items-center gap-4">
-              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="px-12 py-5 rounded-[2rem] text-sm font-black uppercase tracking-widest border-2 shadow-sm hover:bg-gray-900 hover:text-white transition-all">
+              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="px-12 py-5 rounded-4xl text-sm font-black uppercase tracking-widest border-2 shadow-sm hover:bg-gray-900 hover:text-white transition-all">
                 Browse Files
               </Button>
               <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mt-4">
@@ -295,7 +295,7 @@ const MedicalReportAnalyzer = () => {
           <footer className="bg-gray-900 text-white p-12 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-1000"></div>
             <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-10">
-              <div className="p-5 bg-white/10 rounded-[2rem] text-primary-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
+              <div className="p-5 bg-white/10 rounded-4xl text-primary-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
                 <AlertCircle size={32} />
               </div>
               <div>

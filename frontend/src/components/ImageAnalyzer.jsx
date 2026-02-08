@@ -124,7 +124,7 @@ const ImageAnalyzer = () => {
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Image Analyze</h2>
           <p className="text-gray-500 font-medium text-xl leading-relaxed">"Seeing is believing." — Advanced AI screening for Chest, Brain, and Bone scans.</p>
         </div>
-        <div className="flex items-center gap-3 px-6 py-3 bg-warning-50 text-warning-700 rounded-[2rem] text-xs font-black border border-warning-100 shadow-sm shadow-warning-50">
+        <div className="flex items-center gap-3 px-6 py-3 bg-warning-50 text-warning-700 rounded-4xl text-xs font-black border border-warning-100 shadow-sm shadow-warning-50">
           <AlertTriangle size={20} className="text-warning-500" />
           Research Use Only
         </div>
@@ -164,7 +164,7 @@ const ImageAnalyzer = () => {
               <div className="relative w-full aspect-square max-w-sm mx-auto rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white group-hover:scale-105 transition-transform duration-700">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity backdrop-blur-sm">
-                  <p className="text-white font-black bg-black/50 px-8 py-4 rounded-[2rem] border border-white/20 uppercase tracking-widest text-[10px]">Change Scan Image</p>
+                  <p className="text-white font-black bg-black/50 px-8 py-4 rounded-4xl border border-white/20 uppercase tracking-widest text-[10px]">Change Scan Image</p>
                 </div>
               </div>
             ) : (
@@ -183,7 +183,7 @@ const ImageAnalyzer = () => {
           <Button 
             onClick={analyzeImage} 
             disabled={!selectedImage || isAnalyzing}
-            className="w-full py-6 rounded-[2rem] text-lg font-black shadow-2xl shadow-primary-100 active:scale-95 transition-all relative z-10"
+            className="w-full py-6 rounded-4xl text-lg font-black shadow-2xl shadow-primary-100 active:scale-95 transition-all relative z-10"
           >
             {isAnalyzing ? (
               <>
@@ -197,7 +197,7 @@ const ImageAnalyzer = () => {
           </Button>
 
           {error && (
-            <div className="p-6 bg-danger-50 text-danger-600 rounded-[2rem] border border-danger-100 flex items-center gap-5 text-xs font-black uppercase tracking-widest animate-in shake duration-300 relative z-10">
+            <div className="p-6 bg-danger-50 text-danger-600 rounded-4xl border border-danger-100 flex items-center gap-5 text-xs font-black uppercase tracking-widest animate-in shake duration-300 relative z-10">
               <AlertTriangle size={24} className="shrink-0" />
               {error}
             </div>
@@ -268,7 +268,7 @@ const ImageAnalyzer = () => {
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Care Recommendations</h4>
                 <div className="grid grid-cols-1 gap-4">
                   {analysisResults.recommendations.map((r, i) => (
-                    <div key={i} className="flex items-start gap-5 p-5 bg-gray-50 rounded-[2rem] border border-gray-100 group/item hover:bg-white hover:shadow-xl transition-all duration-300">
+                    <div key={i} className="flex items-start gap-5 p-5 bg-gray-50 rounded-4xl border border-gray-100 group/item hover:bg-white hover:shadow-xl transition-all duration-300">
                       <div className="mt-2 w-2 h-2 bg-primary-500 rounded-full shrink-0 group-hover/item:scale-150 transition-transform"></div>
                       <p className="text-sm text-gray-600 font-bold leading-relaxed">{r}</p>
                     </div>
@@ -294,7 +294,7 @@ const ImageAnalyzer = () => {
       <footer className="p-10 bg-gray-900 text-white rounded-[3rem] shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-1000"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-          <div className="p-5 bg-white/10 rounded-[2rem] text-warning-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
+          <div className="p-5 bg-white/10 rounded-4xl text-warning-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
             <ShieldCheck size={32} />
           </div>
           <div>

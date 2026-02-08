@@ -35,7 +35,7 @@ const NavigationTabs = ({ activeTab, setActiveTab }) => {
           }`}
         >
           {activeTab === tab.id && (
-            <div className="absolute inset-0 bg-gradient-to-r from-primary-600/20 to-transparent opacity-50"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-primary-600/20 to-transparent opacity-50"></div>
           )}
           <span className={`relative z-10 transition-all duration-500 ${activeTab === tab.id ? "text-primary-400 scale-125" : "text-gray-300 group-hover:text-primary-500 group-hover:scale-110"}`}>
             {tab.icon}

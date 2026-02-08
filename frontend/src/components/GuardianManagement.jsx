@@ -270,7 +270,7 @@ const GuardianManagement = () => {
           <p className="text-gray-500 font-medium text-xl leading-relaxed">"Trust is the glue of life." — Designate your emergency medical contacts for decentralized safety.</p>
         </div>
         {isPatientEmergencyActive && (
-          <div className="flex items-center gap-3 px-6 py-3 bg-danger-50 text-danger-700 rounded-[2rem] text-xs font-black border border-danger-100 shadow-sm shadow-danger-50 animate-pulse">
+          <div className="flex items-center gap-3 px-6 py-3 bg-danger-50 text-danger-700 rounded-4xl text-xs font-black border border-danger-100 shadow-sm shadow-danger-50 animate-pulse">
             <AlertTriangle size={20} className="text-danger-500" />
             EMERGENCY ACCESS ACTIVE
           </div>
@@ -293,7 +293,7 @@ const GuardianManagement = () => {
           </div>
 
           {/* Emergency Duration Setting */}
-          <div className="bg-gray-50 p-8 rounded-[2rem] border border-gray-100 space-y-6 relative z-10">
+          <div className="bg-gray-50 p-8 rounded-4xl border border-gray-100 space-y-6 relative z-10">
             <div className="flex items-center gap-3 text-gray-900 font-black uppercase tracking-widest text-xs">
               <Clock size={18} className="text-primary-500" />
               Access Expiry Window
@@ -303,7 +303,7 @@ const GuardianManagement = () => {
                 type="number"
                 value={customDuration}
                 onChange={(e) => setCustomDuration(e.target.value)}
-                className="flex-grow px-6 py-4 bg-white border-2 border-transparent rounded-xl text-lg font-bold focus:border-primary-100 outline-none transition-all"
+                className="grow px-6 py-4 bg-white border-2 border-transparent rounded-xl text-lg font-bold focus:border-primary-100 outline-none transition-all"
                 placeholder="Hours (e.g. 24)"
               />
               <Button 
@@ -324,7 +324,7 @@ const GuardianManagement = () => {
                 placeholder="Guardian Wallet Address (0x...)"
                 value={newGuardian}
                 onChange={(e) => setNewGuardian(e.target.value)}
-                className="flex-grow px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all shadow-inner"
+                className="grow px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all shadow-inner"
               />
               <button
                 onClick={addGuardian}
@@ -355,7 +355,7 @@ const GuardianManagement = () => {
             <Button
               onClick={assignGuardians}
               disabled={loading || guardians.length < 2}
-              className="w-full py-6 bg-gray-900 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+              className="w-full py-6 bg-gray-900 text-white rounded-4xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl hover:bg-primary-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
             >
               {loading ? <Loader2 size={20} className="animate-spin" /> : <ShieldCheck size={20} />} Update Guardians
             </Button>
@@ -405,7 +405,7 @@ const GuardianManagement = () => {
                   placeholder="0x..."
                   value={patientAddress}
                   onChange={(e) => setPatientAddress(e.target.value)}
-                  className="flex-grow px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all shadow-inner"
+                  className="grow px-8 py-5 bg-gray-50 border-2 border-transparent rounded-2xl text-lg font-bold focus:bg-white focus:border-primary-100 outline-none transition-all shadow-inner"
                 />
                 <button
                   onClick={checkGuardianStatus}

@@ -31,7 +31,7 @@ const StatsCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {stats.map((stat, index) => (
-        <div key={index} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
+        <div key={index} className="bg-white p-6 rounded-4xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 group">
           <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
               {stat.icon}

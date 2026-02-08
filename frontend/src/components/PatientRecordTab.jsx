@@ -233,7 +233,7 @@ const PatientRecordsTab = () => {
 
   if (!patient) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-danger-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle size={32} className="text-danger-500" />
@@ -249,7 +249,7 @@ const PatientRecordsTab = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-6 flex items-center justify-between">
@@ -380,7 +380,7 @@ const PatientRecordsTab = () => {
                 <Shield size={32} />
               </div>
               <h4 className="text-xl font-black text-gray-900">Access Restricted</h4>
-              <p className="text-gray-500 max-w-md mx-auto font-medium">{error}</p>
+              <p className="text-gray-500 mx-auto font-medium">{error}</p>
             </div>
           ) : medicalReports.length === 0 ? (
             <div className="bg-white p-12 rounded-[3rem] border border-gray-100 text-center space-y-4">
@@ -432,7 +432,7 @@ const PatientRecordsTab = () => {
 
       {/* Viewing Modal */}
       {viewingReport && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-xl">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-6 bg-gray-900/80 backdrop-blur-xl">
           <div className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-8 border-b border-gray-50 flex items-center justify-between">
               <h3 className="text-2xl font-black text-gray-900">Decrypted Record</h3>

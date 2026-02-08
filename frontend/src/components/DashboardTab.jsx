@@ -103,7 +103,7 @@ const DashboardTab = ({ wearableData }) => {
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="bg-white p-5 rounded-[2rem] shadow-xl shadow-gray-200/40 border border-gray-100 flex items-center gap-5 hover:shadow-2xl hover:border-primary-100 transition-all duration-500 group">
+          <div className="bg-white p-5 rounded-4xl shadow-xl shadow-gray-200/40 border border-gray-100 flex items-center gap-5 hover:shadow-2xl hover:border-primary-100 transition-all duration-500 group">
             <div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">🆔</div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">HealthID</p>
@@ -117,7 +117,7 @@ const DashboardTab = ({ wearableData }) => {
             </div>
           </div>
           
-          <div className="bg-white p-5 rounded-[2rem] shadow-xl shadow-gray-200/40 border border-gray-100 flex items-center gap-5 hover:shadow-2xl hover:border-secondary-100 transition-all duration-500 group">
+          <div className="bg-white p-5 rounded-4xl shadow-xl shadow-gray-200/40 border border-gray-100 flex items-center gap-5 hover:shadow-2xl hover:border-secondary-100 transition-all duration-500 group">
             <div className="w-14 h-14 bg-secondary-50 text-secondary-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:-rotate-6 transition-transform">🦊</div>
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Wallet</p>
@@ -184,7 +184,7 @@ const DashboardTab = ({ wearableData }) => {
             {appointments.map((apt, index) => (
               <div key={index} className="p-10 hover:bg-gray-50 transition-all duration-500 flex flex-col sm:flex-row sm:items-center justify-between gap-8 group">
                 <div className="flex items-center gap-8">
-                  <div className="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center text-3xl shadow-xl group-hover:rotate-6 transition-transform">👨‍⚕️</div>
+                  <div className="w-20 h-20 bg-white rounded-4xl flex items-center justify-center text-3xl shadow-xl group-hover:rotate-6 transition-transform">👨‍⚕️</div>
                   <div>
                     <p className="text-xl font-black text-gray-900 tracking-tight">{apt.doctor}</p>
                     <p className="text-xs font-black text-primary-500 uppercase tracking-[0.2em] mt-1">{apt.type}</p>
@@ -230,7 +230,7 @@ const DashboardTab = ({ wearableData }) => {
             <div className="relative z-10">
               <h4 className="text-3xl text-white mb-4 tracking-tighter leading-tight">Need Medical Assistance?</h4>
               <p className="text-gray-400 text-base font-bold mb-10 leading-relaxed">Our advanced AI health assistant is available 24/7 to answer your clinical queries with precision.</p>
-              <button className="w-full py-6 bg-primary-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-[2rem] hover:bg-primary-500 transition-all shadow-2xl shadow-primary-900/40 active:scale-95">
+              <button className="w-full py-6 bg-primary-600 text-white text-xs font-black uppercase tracking-[0.2em] rounded-4xl hover:bg-primary-500 transition-all shadow-2xl shadow-primary-900/40 active:scale-95">
                 Launch AI Chat
               </button>
             </div>
