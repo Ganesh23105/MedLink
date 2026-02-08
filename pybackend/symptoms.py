@@ -107,6 +107,7 @@ def map_symptoms_with_genai(user_input: str) -> List[str]:
         
         # Split and clean the symptoms
         mapped_symptoms = [s.strip() for s in content.split(",") if s.strip() in symptom_index]
+        print(mapped_symptoms)
         return mapped_symptoms
     except Exception as e:
         logger.error(f"Error mapping symptoms with Gen AI: {e}")

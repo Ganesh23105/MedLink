@@ -20,3 +20,5 @@ numpy
 pdf2image
 pytesseract
 pyyaml
+joblib
+scikit-learn

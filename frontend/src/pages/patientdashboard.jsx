@@ -6,7 +6,6 @@ import SymptomChecker from '../components/symptomscheck';
 import MedicalReportAnalyzer from '../components/MedicalReportAnalyzer';
 import DoctorsTab from '../components/DoctorsTab';
 import HealthRecordsTab from '../components/HealthRecordsTab';
-import ZKPVerificationTab from '../components/ZKPVerificationTab';
 import { AccessRequestsPanel } from '../components/AccessRequest';
 import GuardianManagement from '../components/GuardianManagement';
 import ImageAnalyzer from '../components/ImageAnalyzer';
@@ -50,8 +49,6 @@ const PatientDashboard = () => {
         return <HealthRecordsTab />;
       case 'access-requests':
         return <AccessRequestsPanel />;
-      case 'zkp-verification':
-        return <ZKPVerificationTab />;
       case 'guardian-management':
         return <GuardianManagement />;
       case 'image-analyze':
