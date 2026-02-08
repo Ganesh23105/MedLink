@@ -11,7 +11,8 @@ import {
   Heart,
   Bone,
   Zap,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 import { Button } from './button';
 
@@ -297,7 +298,7 @@ const ImageAnalyzer = () => {
             <ShieldCheck size={32} />
           </div>
           <div>
-            <h4 className="text-2xl font-black tracking-tight mb-2">Medical Disclaimer</h4>
+            <h4 className="text-2xl text-white tracking-tight mb-2">Medical Disclaimer</h4>
             <p className="text-gray-400 text-base font-bold leading-relaxed max-w-4xl">
               MedLink Intelligence is for screening and research purposes only. This AI output is not a clinical diagnosis. Always consult with a board-certified healthcare professional for official medical assessments and treatment plans.
             </p>

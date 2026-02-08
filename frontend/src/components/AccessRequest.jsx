@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import axios from 'axios';
 import MedVaultABI from '../abis/MedVaultAbi.json';
 import {
+  X,
   CheckCircle2,
   XCircle,
   Clock,

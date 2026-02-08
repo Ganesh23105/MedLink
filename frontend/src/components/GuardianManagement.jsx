@@ -385,7 +385,7 @@ const GuardianManagement = () => {
                 <AlertTriangle size={32} />
               </div>
               <div>
-                <h3 className="text-3xl font-black tracking-tighter">Emergency Unlock</h3>
+                <h3 className="text-3xl text-white tracking-tighter">Emergency Unlock</h3>
                 <p className="text-sm text-gray-400 font-black uppercase tracking-widest mt-1">Guardian Rescue Portal</p>
               </div>
             </div>
