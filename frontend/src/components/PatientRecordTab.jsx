@@ -51,7 +51,7 @@ const PatientRecordsTab = () => {
   const [viewingReport, setViewingReport] = useState(null);
   const [decryptedContent, setDecryptedContent] = useState("");
   const [decrypting, setDecrypting] = useState(false);
-  const [encryptionKey, setEncryptionKey] = useState("");
+  const [encryptionKey, setEncryptionKey] = useState("12345678");
 
   const MEDVAULT_CONTRACT_ADDRESS = import.meta.env.VITE_MED_VAULT_CONTRACT_ADDRESS;
   const HEALTHID_CONTRACT_ADDRESS = import.meta.env.VITE_HEALTH_ID_CONTRACT_ADDRESS;
@@ -144,12 +144,12 @@ const PatientRecordsTab = () => {
       return;
     }
     
-    if (patient.walletAddress) {
-      const pAddress = patient.walletAddress;
-      setEncryptionKey(`medlink_${pAddress.slice(0, 8)}_${pAddress.slice(-8)}`);
-    } else {
-      setEncryptionKey("12345678");
-    }
+    // if (patient.walletAddress) {
+    //   const pAddress = patient.walletAddress;
+    //   setEncryptionKey(`medlink_${pAddress.slice(0, 8)}_${pAddress.slice(-8)}`);
+    // } else {
+    //   setEncryptionKey("12345678");
+    // }
     
     fetchPatientReports();
   }, [patient, contract, account, hasAccess, hasEmergencyAccess]);
@@ -229,6 +229,7 @@ const PatientRecordsTab = () => {
         window.open(url, "_blank");
       } else {
         setDecryptedContent(result.data);
+        setDecryptedMimeType(result.mimeType);
         setViewingReport(hash);
       }
     } catch (err) {
