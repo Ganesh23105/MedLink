@@ -94,27 +94,104 @@ async def predict(request: PredictionRequest):
     scaler = SCALERS.get(request.model_name)
     imputer = IMPUTERS.get(request.model_name)
     config = MODEL_CONFIGS[request.model_name]
+    # Prefer a saved feature list produced at training time if available
+    features_list = config.get("features", [])
+    try:
+        features_file = os.path.splitext(config["model_path"])[0] + "_features.json"
+        if os.path.exists(features_file):
+            import json
+            with open(features_file, "r", encoding="utf-8") as fh:
+                loaded = json.load(fh)
+            if isinstance(loaded, list) and loaded:
+                features_list = loaded
+                logger.info(f"Using saved feature list for model {request.model_name} from {features_file} (len={len(features_list)})")
+    except Exception as e:
+        logger.warning(f"Could not load features file for {request.model_name}: {e}")
     
     try:
         # Prepare input data
         input_values = []
-        for feature in config["features"]:
-            val = request.data.get(feature)
+        def to_float_safe(val):
+            # Handle None
             if val is None:
-                # If imputer exists, we can handle missing values later, but for now, let's expect all
-                input_values.append(np.nan)
-            else:
-                input_values.append(float(val))
+                return np.nan
+            # If already numeric
+            if isinstance(val, (int, float, np.floating, np.integer)):
+                try:
+                    return float(val)
+                except:
+                    return np.nan
+            # Strip strings
+            if isinstance(val, str):
+                s = val.strip()
+                if s == "":
+                    return np.nan
+                # Replace common comma decimal
+                s2 = s.replace(",", ".")
+                try:
+                    return float(s2)
+                except:
+                    low = s2.lower()
+                    # basic categorical mappings (gender, yes/no)
+                    if low in ("male", "m"):
+                        return 1.0
+                    if low in ("female", "f"):
+                        return 0.0
+                    if low in ("yes", "y", "true", "t"):
+                        return 1.0
+                    if low in ("no", "n", "false", "f"):
+                        return 0.0
+                    return np.nan
+            # Unknown type
+            return np.nan
+
+        for feature in features_list:
+            raw_val = request.data.get(feature)
+            parsed = to_float_safe(raw_val)
+            input_values.append(parsed)
+
+        # Log any fields that were coerced to NaN for debugging
+        nan_fields = [f for f, v in zip(config["features"], input_values) if pd.isna(v)]
+        if nan_fields:
+            raw_map = {f: request.data.get(f) for f in nan_fields}
+            logger.info(f"Fields coerced to NaN for model {request.model_name}: {nan_fields}. Raw values: {raw_map}")
         
         input_array = np.array([input_values])
         
-        # Apply Imputer if exists
+        # Helper to align input array columns to transformer expectations
+        def _align_to_transformer(arr, transformer, transformer_name):
+            if not hasattr(transformer, "n_features_in_"):
+                return arr
+            expected = int(getattr(transformer, "n_features_in_"))
+            current = arr.shape[1]
+            if current == expected:
+                return arr
+            if current < expected:
+                # pad with NaNs on the right
+                pad = np.full((arr.shape[0], expected - current), np.nan)
+                logger.warning(f"{transformer_name} expects {expected} features but input has {current}. Padding with NaN columns.")
+                return np.concatenate([arr, pad], axis=1)
+            # current > expected: trim extra columns
+            logger.warning(f"{transformer_name} expects {expected} features but input has {current}. Trimming extra columns.")
+            return arr[:, :expected]
+
+        # Apply Imputer if exists (align first)
         if imputer:
-            input_array = imputer.transform(input_array)
+            try:
+                input_array = _align_to_transformer(input_array, imputer, "Imputer")
+                input_array = imputer.transform(input_array)
+            except Exception as ex:
+                logger.error(f"Imputer transform failed for {request.model_name}: {ex}")
+                raise
             
-        # Apply Scaler if exists
+        # Apply Scaler if exists (align to scaler expectations)
         if scaler:
-            input_array = scaler.transform(input_array)
+            try:
+                input_array = _align_to_transformer(input_array, scaler, "Scaler")
+                input_array = scaler.transform(input_array)
+            except Exception as ex:
+                logger.error(f"Scaler transform failed for {request.model_name}: {ex}")
+                raise
         
         # Prediction
         prediction = model.predict(input_array)[0]
