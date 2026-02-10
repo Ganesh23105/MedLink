@@ -13,7 +13,8 @@ import {
   Zap,
   ShieldCheck,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  Stethoscope
 } from 'lucide-react';
 import { Button } from './button';
 
@@ -29,7 +30,8 @@ const ImageAnalyzer = () => {
     { id: 'brain_tumor', name: 'Brain Tumor (MRI)', icon: <Brain size={20} /> },
     { id: 'breast_cancer', name: 'Breast Cancer (Histopathology)', icon: <Microscope size={20} /> },
     { id: 'diabetic_retinopathy', name: 'Diabetic Retinopathy', icon: <Eye size={20} /> },
-    { id: 'skin_cancer', name: 'Skin Cancer', icon: <Activity size={20} /> }
+    { id: 'skin_cancer', name: 'Skin Cancer', icon: <Activity size={20} /> },
+    { id: 'pneumonia_xray', name: 'Pneumonia (Chest X-Ray)', icon: <Stethoscope size={20} /> }
   ];
 
   const handleImageSelect = useCallback((file) => {
@@ -76,19 +78,20 @@ const ImageAnalyzer = () => {
           const response = await fetch('http://localhost:8003/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               task: selectedTask,
-              image: base64Data 
+              image: base64Data
             })
           });
 
           if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.detail || 'Analysis failed');
+            const errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData) || 'Analysis failed';
+            throw new Error(errorMessage);
           }
 
           const data = await response.json();
-          
+
           // Transform API response to UI format
           const formattedResults = {
             task: data.task,
@@ -120,7 +123,7 @@ const ImageAnalyzer = () => {
 
   const getRecommendations = (task, prediction) => {
     const baseRecs = [
-      'This AI analysis is for screening purposes only.',
+      'This ML analysis is for screening purposes only.',
       'Always consult with a healthcare professional for official diagnosis.'
     ];
 
@@ -148,7 +151,7 @@ const ImageAnalyzer = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="space-y-3">
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Medical Image Analyzer</h2>
-          <p className="text-gray-500 font-medium text-xl leading-relaxed">Advanced AI screening for Brain, Breast, Eye, and Skin conditions.</p>
+          <p className="text-gray-500 font-medium text-xl leading-relaxed">Advanced AI screening for Brain, Breast, Eye, Skin, and Chest conditions.</p>
         </div>
         <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 text-amber-700 rounded-4xl text-xs font-black border border-amber-100 shadow-sm">
           <AlertTriangle size={20} className="text-amber-500" />
@@ -160,7 +163,7 @@ const ImageAnalyzer = () => {
         {/* UPLOAD SECTION */}
         <section className="bg-white p-12 rounded-[3rem] shadow-xl shadow-gray-200/40 border border-gray-100 space-y-10 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-48 h-48 bg-primary-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
-          
+
           <div className="flex items-center gap-5 relative z-10">
             <div className="w-16 h-16 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center shadow-sm">
               <Upload size={32} />
@@ -179,11 +182,10 @@ const ImageAnalyzer = () => {
                 <button
                   key={task.id}
                   onClick={() => setSelectedTask(task.id)}
-                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
-                    selectedTask === task.id 
-                    ? 'border-primary-500 bg-primary-50 text-primary-900 shadow-md' 
+                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 text-left ${selectedTask === task.id
+                    ? 'border-primary-500 bg-primary-50 text-primary-900 shadow-md'
                     : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-primary-200'
-                  }`}
+                    }`}
                 >
                   <div className={`${selectedTask === task.id ? 'text-primary-600' : 'text-gray-400'}`}>
                     {task.icon}
@@ -198,9 +200,8 @@ const ImageAnalyzer = () => {
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onClick={() => document.getElementById('file-input').click()}
-            className={`border-4 border-dashed rounded-[3rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 relative z-10 ${
-              imagePreview ? 'border-primary-500 bg-primary-50/30 shadow-2xl shadow-primary-50' : 'border-gray-100 bg-gray-50/50 hover:border-primary-400 hover:bg-white'
-            }`}
+            className={`border-4 border-dashed rounded-[3rem] p-12 flex flex-col items-center justify-center cursor-pointer transition-all duration-500 relative z-10 ${imagePreview ? 'border-primary-500 bg-primary-50/30 shadow-2xl shadow-primary-50' : 'border-gray-100 bg-gray-50/50 hover:border-primary-400 hover:bg-white'
+              }`}
           >
             <input
               id="file-input"
@@ -229,8 +230,8 @@ const ImageAnalyzer = () => {
             )}
           </div>
 
-          <Button 
-            onClick={analyzeImage} 
+          <Button
+            onClick={analyzeImage}
             disabled={!selectedImage || isAnalyzing}
             className="w-full py-6 rounded-4xl text-lg font-black shadow-2xl shadow-primary-100 active:scale-95 transition-all relative z-10"
           >
@@ -256,7 +257,7 @@ const ImageAnalyzer = () => {
         {/* RESULTS SECTION */}
         <section className="bg-white p-12 rounded-[3rem] shadow-xl shadow-gray-200/40 border border-gray-100 space-y-10 flex flex-col relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
-          
+
           <div className="flex items-center gap-5 relative z-10">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
               <Activity size={32} />
@@ -303,8 +304,8 @@ const ImageAnalyzer = () => {
                         <span className={p.score > 0.7 ? 'text-emerald-600' : 'text-gray-400'}>{(p.score * 100).toFixed(1)}% Confidence</span>
                       </div>
                       <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden shadow-inner">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${p.score > 0.7 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-primary-500'}`} 
+                        <div
+                          className={`h-full transition-all duration-1000 ${p.score > 0.7 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-primary-500'}`}
                           style={{ width: `${p.score * 100}%` }}
                         ></div>
                       </div>

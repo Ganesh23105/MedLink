@@ -43,7 +43,7 @@ class AnalyzeRequest(BaseModel):
     @validator('task')
     def validate_task(cls, v):
         """Validate that task is one of the supported tasks."""
-        valid_tasks = ["brain_tumor", "breast_cancer", "diabetic_retinopathy", "skin_cancer"]
+        valid_tasks = ["brain_tumor", "breast_cancer", "diabetic_retinopathy", "skin_cancer", "pneumonia_xray"]
         if v.lower() not in valid_tasks:
             raise ValueError(f"Task must be one of {valid_tasks}")
         return v.lower()
@@ -60,7 +60,7 @@ class AnalyzeRequest(BaseModel):
 MODEL_CONFIG = {
     "brain_tumor": {
         "path": "image_models/brain_tumor_mri_model.h5",
-        "classes": ["Glioma", "Meningioma", "Pituitary Tumor", "No Tumor"],
+        "classes": ["Tumor", "No Tumor"],
         "type": "softmax"
     },
     "breast_cancer": {
@@ -77,6 +77,11 @@ MODEL_CONFIG = {
         "path": "image_models/skin_cancer_model.h5",
         "classes": ["Benign", "Malignant"],
         "type": "softmax"
+    },
+    "pneumonia_xray": {
+        "path": "image_models/pneumonia_xray_model.h5",
+        "classes": ["Normal", "Pneumonia"],
+        "type": "sigmoid"
     }
 }
 
