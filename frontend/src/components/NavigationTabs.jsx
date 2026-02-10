@@ -7,7 +7,8 @@ import {
   FileText, 
   Key, 
   ShieldCheck, 
-  Image as ImageIcon 
+  Image as ImageIcon,
+  Activity as ActivityIcon
 } from 'lucide-react';
 
 const NavigationTabs = ({ activeTab, setActiveTab }) => {
@@ -19,7 +20,8 @@ const NavigationTabs = ({ activeTab, setActiveTab }) => {
     { id: 'health-records', label: 'Health Records', icon: <FileText size={18} /> },
     { id: 'access-requests', label: 'Access Requests', icon: <Key size={18} /> },
     { id: 'guardian-management', label: 'Guardian Management', icon: <ShieldCheck size={18} /> },
-    { id: 'image-analyze', label: 'Image Analyze', icon: <ImageIcon size={18} /> }
+    { id: 'image-analyze', label: 'Image Analyze', icon: <ImageIcon size={18} /> },
+    { id: 'health-metrics', label: 'Health Metrics', icon: <ActivityIcon size={18} /> }
   ];
 
   return (

@@ -9,6 +9,7 @@ import HealthRecordsTab from '../components/HealthRecordsTab';
 import { AccessRequestsPanel } from '../components/AccessRequest';
 import GuardianManagement from '../components/GuardianManagement';
 import ImageAnalyzer from '../components/ImageAnalyzer';
+import HealthMetricsAnalyzer from '../components/HealthMetricsAnalyzer';
 import EmergencyBanner from '../components/EmergencyBanner';
 
 const PatientDashboard = () => {
@@ -54,6 +55,8 @@ const PatientDashboard = () => {
         return <GuardianManagement />;
       case 'image-analyze':
         return <ImageAnalyzer />;
+      case 'health-metrics':
+        return <HealthMetricsAnalyzer />;
       default:
         return <DashboardTab wearableData={wearableData} />;
     }
