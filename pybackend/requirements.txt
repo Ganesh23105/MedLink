@@ -23,3 +23,4 @@ pyyaml
 joblib
 scikit-learn
 tensorflow
+pandas
