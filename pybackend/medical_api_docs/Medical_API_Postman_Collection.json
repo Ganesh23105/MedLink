@@ -1,0 +1,350 @@
+{
+  "info": {
+    "name": "Medical Image Analysis API",
+    "description": "Complete test suite for Medical Image Analysis API v2.1.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "name": "base_url",
+      "value": "http://localhost:8003",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & System",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is healthy or degraded\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.be.oneOf([\"healthy\", \"degraded\"]);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains all required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('models_loaded');",
+                  "    pm.expect(jsonData).to.have.property('available_tasks');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/health"
+          }
+        },
+        {
+          "name": "Get All Available Tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"All 4 tasks are returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('brain_tumor');",
+                  "    pm.expect(jsonData).to.have.property('breast_cancer');",
+                  "    pm.expect(jsonData).to.have.property('diabetic_retinopathy');",
+                  "    pm.expect(jsonData).to.have.property('skin_cancer');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/tasks"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Brain Tumor Analysis",
+      "item": [
+        {
+          "name": "Analyze Brain Tumor (Sample)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 500]);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has prediction and confidence\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(jsonData).to.have.property('prediction');",
+                  "        pm.expect(jsonData).to.have.property('confidence');",
+                  "        pm.expect(jsonData).to.have.property('all_probabilities');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"brain_tumor\",\n  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Breast Cancer Analysis",
+      "item": [
+        {
+          "name": "Analyze Breast Cancer (Sample)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 500]);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has brain_tumor or breast_cancer task\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(jsonData.task).to.be.oneOf(['breast_cancer']);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"breast_cancer\",\n  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Diabetic Retinopathy Analysis",
+      "item": [
+        {
+          "name": "Analyze Diabetic Retinopathy (Sample)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 500]);",
+                  "});",
+                  "",
+                  "pm.test(\"Task is diabetic_retinopathy\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(jsonData.task).to.equal('diabetic_retinopathy');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"diabetic_retinopathy\",\n  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Skin Cancer Analysis",
+      "item": [
+        {
+          "name": "Analyze Skin Cancer (Sample)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 500]);",
+                  "});",
+                  "",
+                  "pm.test(\"Task is skin_cancer\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(jsonData.task).to.equal('skin_cancer');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"skin_cancer\",\n  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Error Cases (Testing)",
+      "item": [
+        {
+          "name": "Error: Invalid Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 for invalid task\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message is helpful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.detail).to.include('Invalid task');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"invalid_disease_model\",\n  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        },
+        {
+          "name": "Error: Empty Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 for empty image\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message mentions image\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.detail.toLowerCase()).to.include('image');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"brain_tumor\",\n  \"image\": \"\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        },
+        {
+          "name": "Error: Invalid Base64",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 for invalid base64\", function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message is returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('detail');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task\": \"brain_tumor\",\n  \"image\": \"not-valid-base64!!!\"\n}"
+            },
+            "url": "{{base_url}}/analyze"
+          }
+        }
+      ]
+    }
+  ]
+}

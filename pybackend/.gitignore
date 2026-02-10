@@ -39,7 +39,10 @@ pytest_cache/
 temp/
 uploads/
 temp_uploads/
+image_models/
 
 # PDF / Generated Files
 *.pdf
 output/
+
+*.h5

@@ -22,3 +22,4 @@ pytesseract
 pyyaml
 joblib
 scikit-learn
+tensorflow
