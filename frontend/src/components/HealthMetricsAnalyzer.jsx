@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  Activity, 
-  Clipboard, 
-  Zap, 
-  AlertTriangle, 
-  CheckCircle, 
-  Loader2, 
-  Heart, 
-  Droplets, 
+import {
+  Activity,
+  Clipboard,
+  Zap,
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
+  Heart,
+  Droplets,
   Activity as KidneyIcon,
   User,
   ChevronRight
@@ -15,17 +15,18 @@ import {
 import { Button } from './button';
 
 const HealthMetricsAnalyzer = () => {
-  const [selectedModel, setSelectedModel] = useState('diabetes');
+  const [selectedModel, setSelectedModel] = useState('metabolic_screening');
   const [formData, setFormData] = useState({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
   const models = {
-    diabetes: {
-      name: 'Diabetes Risk',
-      icon: <Droplets className="text-red-500" />,
-      description: 'Analyze glucose, insulin, and BMI for diabetes screening.',
+    metabolic_screening: {
+      name: 'BP & Diabetes',
+      icon: <Heart className="text-red-500" />,
+      description: 'Dual risk assessment with diabetes prediction informing blood pressure analysis.',
+      models: ['diabetes', 'bp'],
       fields: [
         { id: 'Pregnancies', label: 'Pregnancies', type: 'number', placeholder: '0' },
         { id: 'Glucose', label: 'Glucose (mg/dL)', type: 'number', placeholder: '120' },
@@ -88,22 +89,97 @@ const HealthMetricsAnalyzer = () => {
     setResult(null);
 
     try {
-      const response = await fetch('http://localhost:8004/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model_name: selectedModel,
-          data: formData
-        })
-      });
+      // If metabolic_screening, run diabetes first, then use its prediction for BP model
+      if (selectedModel === 'metabolic_screening') {
+        const diabetesData = {
+          Pregnancies: formData.Pregnancies,
+          Glucose: formData.Glucose,
+          BloodPressure: formData.BloodPressure,
+          SkinThickness: formData.SkinThickness,
+          Insulin: formData.Insulin,
+          BMI: formData.BMI,
+          DiabetesPedigreeFunction: formData.DiabetesPedigreeFunction,
+          Age: formData.Age
+        };
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || 'Analysis failed');
+        try {
+          // Step 1: Run Diabetes model
+          const diabetesRes = await fetch('http://localhost:8004/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model_name: 'diabetes',
+              data: diabetesData
+            })
+          });
+
+          if (!diabetesRes.ok) {
+            const errData = await diabetesRes.json();
+            throw new Error(errData.detail || 'Diabetes analysis failed');
+          }
+
+          const diabetesResult = await diabetesRes.json();
+          // Map prediction to 0 or 1 (Healthy=0, Diabetic=1)
+          const diabetesOutcome = diabetesResult.prediction.toLowerCase().includes('diabetic') ? 1 : 0;
+
+          // Step 2: Run BP model with diabetes outcome
+          const bpData = {
+            Pregnancies: formData.Pregnancies,
+            Glucose: formData.Glucose,
+            SkinThickness: formData.SkinThickness,
+            Insulin: formData.Insulin,
+            BMI: formData.BMI,
+            DiabetesPedigreeFunction: formData.DiabetesPedigreeFunction,
+            Age: formData.Age,
+            Outcome: diabetesOutcome.toString()
+          };
+
+          const bpRes = await fetch('http://localhost:8004/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model_name: 'bp',
+              data: bpData
+            })
+          });
+
+          if (!bpRes.ok) {
+            const errData = await bpRes.json();
+            throw new Error(errData.detail || 'BP analysis failed');
+          }
+
+          const bpResult = await bpRes.json();
+
+          setResult({
+            dual: true,
+            diabetes: diabetesResult,
+            bp: bpResult
+          });
+        } catch (err) {
+          throw err;
+        }
+      } else {
+        // Single model prediction
+        const response = await fetch('http://localhost:8004/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model_name: selectedModel,
+            data: formData
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Analysis failed');
+        }
+
+        const data = await response.json();
+        setResult({
+          dual: false,
+          ...data
+        });
       }
-
-      const data = await response.json();
-      setResult(data);
     } catch (err) {
       setError(err.message || 'Connection to analysis server failed. Ensure backend is running.');
     } finally {
@@ -116,7 +192,7 @@ const HealthMetricsAnalyzer = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="space-y-3">
           <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Health Metrics Analyzer</h2>
-          <p className="text-gray-500 font-medium text-xl leading-relaxed">Predictive screening for chronic conditions using clinical data points.</p>
+          <p className="text-gray-500 font-medium text-xl leading-relaxed">Intelligent dual-model screening where diabetes prediction informs blood pressure risk assessment.</p>
         </div>
         <div className="flex items-center gap-3 px-6 py-3 bg-primary-50 text-primary-700 rounded-4xl text-xs font-black border border-primary-100 shadow-sm">
           <Clipboard size={20} className="text-primary-500" />
@@ -137,15 +213,13 @@ const HealthMetricsAnalyzer = () => {
                   setFormData({});
                   setResult(null);
                 }}
-                className={`w-full flex items-center gap-5 p-6 rounded-[2rem] border-2 transition-all duration-500 text-left group ${
-                  selectedModel === id 
-                  ? 'border-primary-500 bg-white shadow-2xl shadow-primary-100 scale-105' 
+                className={`w-full flex items-center gap-5 p-6 rounded-[2rem] border-2 transition-all duration-500 text-left group ${selectedModel === id
+                  ? 'border-primary-500 bg-white shadow-2xl shadow-primary-100 scale-105'
                   : 'border-gray-100 bg-gray-50/50 hover:border-primary-200 hover:bg-white'
-                }`}
+                  }`}
               >
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-transform duration-500 group-hover:rotate-6 ${
-                  selectedModel === id ? 'bg-primary-50' : 'bg-white'
-                }`}>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-transform duration-500 group-hover:rotate-6 ${selectedModel === id ? 'bg-primary-50' : 'bg-white'
+                  }`}>
                   {model.icon}
                 </div>
                 <div className="flex-grow">
@@ -161,14 +235,14 @@ const HealthMetricsAnalyzer = () => {
         {/* INPUT FORM */}
         <section className="lg:col-span-2 bg-white p-12 rounded-[3rem] shadow-xl shadow-gray-200/40 border border-gray-100 space-y-10 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-primary-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50"></div>
-          
+
           <div className="flex items-center gap-5 relative z-10">
             <div className="w-16 h-16 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center shadow-sm">
               <User size={32} />
             </div>
             <div>
               <h3 className="text-2xl font-black text-gray-900 tracking-tight">{models[selectedModel].name} Data</h3>
-              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Input Clinical Parameters</p>
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">{selectedModel === 'metabolic_screening' ? 'Single Input - Diabetes→BP Analysis' : 'Input Clinical Parameters'}</p>
             </div>
           </div>
 
@@ -187,8 +261,8 @@ const HealthMetricsAnalyzer = () => {
             ))}
           </div>
 
-          <Button 
-            onClick={runAnalysis} 
+          <Button
+            onClick={runAnalysis}
             disabled={isAnalyzing}
             className="w-full py-6 rounded-4xl text-lg font-black shadow-2xl shadow-primary-100 active:scale-95 transition-all relative z-10"
           >
@@ -211,31 +285,79 @@ const HealthMetricsAnalyzer = () => {
           )}
 
           {result && (
-            <div className="mt-10 p-10 bg-primary-50 rounded-[2.5rem] border-2 border-primary-100 shadow-inner animate-in fade-in slide-in-from-top-4 duration-700 relative z-10">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 bg-white text-primary-600 rounded-2xl flex items-center justify-center shadow-sm">
-                    <CheckCircle size={28} />
+            <div className="mt-10 space-y-8 animate-in fade-in slide-in-from-top-4 duration-700 relative z-10">
+              {result.dual ? (
+                // Dual results (Diabetes + BP)
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Diabetes Result */}
+                  <div className="p-10 bg-red-50 rounded-[2.5rem] border-2 border-red-100 shadow-inner">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 bg-white text-red-500 rounded-2xl flex items-center justify-center shadow-sm">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-red-400 font-black uppercase tracking-[0.3em]">Diabetes Risk</p>
+                        <p className="text-2xl font-black text-red-900 tracking-tighter">{result.diabetes.prediction}</p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/50 h-3 rounded-full overflow-hidden mb-6">
+                      <div
+                        className="h-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all duration-1000"
+                        style={{ width: `${result.diabetes.confidence * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm font-black text-red-700 text-right">{(result.diabetes.confidence * 100).toFixed(1)}% Confidence</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-primary-400 font-black uppercase tracking-[0.3em]">Analysis Result</p>
-                    <p className="text-3xl font-black text-primary-900 tracking-tighter">{result.prediction}</p>
+
+                  {/* BP Result */}
+                  <div className="p-10 bg-pink-50 rounded-[2.5rem] border-2 border-pink-100 shadow-inner">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="w-12 h-12 bg-white text-pink-500 rounded-2xl flex items-center justify-center shadow-sm">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-pink-400 font-black uppercase tracking-[0.3em]">Blood Pressure</p>
+                        <p className="text-2xl font-black text-pink-900 tracking-tighter">{result.bp.prediction}</p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/50 h-3 rounded-full overflow-hidden mb-6">
+                      <div
+                        className="h-full bg-pink-500 shadow-[0_0_15px_rgba(236,72,153,0.5)] transition-all duration-1000"
+                        style={{ width: `${result.bp.confidence * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm font-black text-pink-700 text-right">{(result.bp.confidence * 100).toFixed(1)}% Confidence</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-primary-400 font-black uppercase tracking-[0.3em]">Confidence</p>
-                  <p className="text-2xl font-black text-primary-700">{(result.confidence * 100).toFixed(1)}%</p>
+              ) : (
+                // Single result (Liver or Kidney)
+                <div className="p-10 bg-primary-50 rounded-[2.5rem] border-2 border-primary-100 shadow-inner">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-white text-primary-600 rounded-2xl flex items-center justify-center shadow-sm">
+                        <CheckCircle size={28} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-primary-400 font-black uppercase tracking-[0.3em]">Analysis Result</p>
+                        <p className="text-3xl font-black text-primary-900 tracking-tighter">{result.prediction}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-primary-400 font-black uppercase tracking-[0.3em]">Confidence</p>
+                      <p className="text-2xl font-black text-primary-700">{(result.confidence * 100).toFixed(1)}%</p>
+                    </div>
+                  </div>
+
+                  <div className="w-full bg-white/50 h-4 rounded-full overflow-hidden mb-6">
+                    <div
+                      className="h-full bg-primary-500 shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-1000"
+                      style={{ width: `${result.confidence * 100}%` }}
+                    ></div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="w-full bg-white/50 h-4 rounded-full overflow-hidden mb-6">
-                <div 
-                  className="h-full bg-primary-500 shadow-[0_0_15px_rgba(37,99,235,0.5)] transition-all duration-1000"
-                  style={{ width: `${result.confidence * 100}%` }}
-                ></div>
-              </div>
-              
-              <p className="text-sm text-primary-800 font-bold leading-relaxed bg-white/40 p-5 rounded-2xl border border-primary-100/50">
+              )}
+
+              <p className="text-sm text-gray-700 font-bold leading-relaxed bg-gray-50 p-5 rounded-2xl border border-gray-200">
                 <span className="text-primary-600 mr-2">●</span>
                 This assessment is based on the provided clinical metrics. Please consult a healthcare professional for a definitive diagnosis.
               </p>

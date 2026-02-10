@@ -46,6 +46,12 @@ MODEL_CONFIGS = {
         "imputer_path": os.path.join(DATASET_PATH, "ckd_imputer.pkl"),
         "features": ['id', 'age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot', 'hemo', 'pcv', 'wc', 'rc'],
         "classes": ["No CKD", "CKD"]
+    },
+    "bp": {
+        "model_path": os.path.join(DATASET_PATH, "bp_model.pkl"),
+        "scaler_path": os.path.join(DATASET_PATH, "bp_scaler.pkl"),
+        "features": ['Pregnancies', 'Glucose', 'SkinThickness', 'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age', 'Outcome'],
+        "classes": ["Normal BP", "High BP"]
     }
 }
 

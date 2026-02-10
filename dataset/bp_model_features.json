@@ -1,0 +1,10 @@
+[
+    "Pregnancies",
+    "Glucose",
+    "SkinThickness",
+    "Insulin",
+    "BMI",
+    "DiabetesPedigreeFunction",
+    "Age",
+    "Outcome"
+]
