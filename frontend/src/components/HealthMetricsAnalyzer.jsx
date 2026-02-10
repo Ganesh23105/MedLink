@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Activity, 
   Clipboard, 
@@ -37,57 +37,6 @@ const HealthMetricsAnalyzer = () => {
         { id: 'Age', label: 'Age', type: 'number', placeholder: '30' }
       ]
     },
-    heart: {
-      name: 'Cardiovascular Health',
-      icon: <Heart className="text-rose-500" />,
-      description: 'Assess heart disease risk based on clinical metrics.',
-      fields: [
-        { id: 'age', label: 'Age', type: 'number', placeholder: '45' },
-        { id: 'sex', label: 'Sex (1=M, 0=F)', type: 'number', placeholder: '1' },
-        { id: 'cp', label: 'Chest Pain Type (0-3)', type: 'number', placeholder: '1' },
-        { id: 'trestbps', label: 'Resting BP', type: 'number', placeholder: '130' },
-        { id: 'chol', label: 'Cholesterol', type: 'number', placeholder: '240' },
-        { id: 'fbs', label: 'Fasting Blood Sugar (>120)', type: 'number', placeholder: '0' },
-        { id: 'restecg', label: 'Resting ECG (0-2)', type: 'number', placeholder: '1' },
-        { id: 'thalach', label: 'Max Heart Rate', type: 'number', placeholder: '150' },
-        { id: 'exang', label: 'Exercise Angina (1=Y, 0=N)', type: 'number', placeholder: '0' },
-        { id: 'oldpeak', label: 'ST Depression', type: 'number', placeholder: '1.0' },
-        { id: 'slope', label: 'ST Slope (0-2)', type: 'number', placeholder: '1' },
-        { id: 'ca', label: 'Major Vessels (0-3)', type: 'number', placeholder: '0' },
-        { id: 'thal', label: 'Thalassemia (1-3)', type: 'number', placeholder: '2' }
-      ]
-    },
-    kidney: {
-      name: 'Chronic Kidney Disease',
-      icon: <KidneyIcon className="text-blue-500" />,
-      description: 'Comprehensive renal function analysis.',
-      fields: [
-        { id: 'age', label: 'Age', type: 'number', placeholder: '50' },
-        { id: 'bp', label: 'Blood Pressure', type: 'number', placeholder: '80' },
-        { id: 'sg', label: 'Specific Gravity', type: 'number', placeholder: '1.020' },
-        { id: 'al', label: 'Albumin (0-5)', type: 'number', placeholder: '0' },
-        { id: 'su', label: 'Sugar (0-5)', type: 'number', placeholder: '0' },
-        { id: 'rbc', label: 'RBC (1=Normal, 0=Abnormal)', type: 'number', placeholder: '1' },
-        { id: 'pc', label: 'Pus Cell (1=Normal, 0=Abnormal)', type: 'number', placeholder: '1' },
-        { id: 'pcc', label: 'Pus Cell Clumps (1=Present, 0=Not)', type: 'number', placeholder: '0' },
-        { id: 'ba', label: 'Bacteria (1=Present, 0=Not)', type: 'number', placeholder: '0' },
-        { id: 'bgr', label: 'Blood Glucose Random', type: 'number', placeholder: '120' },
-        { id: 'bu', label: 'Blood Urea', type: 'number', placeholder: '36' },
-        { id: 'sc', label: 'Serum Creatinine', type: 'number', placeholder: '1.2' },
-        { id: 'sod', label: 'Sodium', type: 'number', placeholder: '138' },
-        { id: 'pot', label: 'Potassium', type: 'number', placeholder: '4.4' },
-        { id: 'hemo', label: 'Hemoglobin', type: 'number', placeholder: '15.4' },
-        { id: 'pcv', label: 'Packed Cell Volume', type: 'number', placeholder: '44' },
-        { id: 'wc', label: 'White Blood Cell Count', type: 'number', placeholder: '7800' },
-        { id: 'rc', label: 'Red Blood Cell Count', type: 'number', placeholder: '5.2' },
-        { id: 'htn', label: 'Hypertension (1=Y, 0=N)', type: 'number', placeholder: '0' },
-        { id: 'dm', label: 'Diabetes Mellitus (1=Y, 0=N)', type: 'number', placeholder: '0' },
-        { id: 'cad', label: 'Coronary Artery Disease (1=Y, 0=N)', type: 'number', placeholder: '0' },
-        { id: 'appet', label: 'Appetite (1=Good, 0=Poor)', type: 'number', placeholder: '1' },
-        { id: 'pe', label: 'Pedal Edema (1=Y, 0=N)', type: 'number', placeholder: '0' },
-        { id: 'ane', label: 'Anemia (1=Y, 0=N)', type: 'number', placeholder: '0' }
-      ]
-    },
     liver: {
       name: 'Liver Function',
       icon: <Activity className="text-orange-500" />,
@@ -104,11 +53,33 @@ const HealthMetricsAnalyzer = () => {
         { id: 'Albumin', label: 'Albumin', type: 'number', placeholder: '3.3' },
         { id: 'Albumin_and_Globulin_Ratio', label: 'A/G Ratio', type: 'number', placeholder: '0.9' }
       ]
+    },
+    kidney: {
+      name: 'Chronic Kidney Disease',
+      icon: <KidneyIcon className="text-blue-500" />,
+      description: 'Comprehensive renal function analysis.',
+      fields: [
+        { id: 'id', label: 'Patient ID', type: 'number', placeholder: '1' },
+        { id: 'age', label: 'Age', type: 'number', placeholder: '50' },
+        { id: 'bp', label: 'Blood Pressure', type: 'number', placeholder: '80' },
+        { id: 'sg', label: 'Specific Gravity', type: 'number', placeholder: '1.020' },
+        { id: 'al', label: 'Albumin (0-5)', type: 'number', placeholder: '0' },
+        { id: 'su', label: 'Sugar (0-5)', type: 'number', placeholder: '0' },
+        { id: 'bgr', label: 'Blood Glucose Random', type: 'number', placeholder: '120' },
+        { id: 'bu', label: 'Blood Urea', type: 'number', placeholder: '36' },
+        { id: 'sc', label: 'Serum Creatinine', type: 'number', placeholder: '1.2' },
+        { id: 'sod', label: 'Sodium', type: 'number', placeholder: '138' },
+        { id: 'pot', label: 'Potassium', type: 'number', placeholder: '4.4' },
+        { id: 'hemo', label: 'Hemoglobin', type: 'number', placeholder: '15.4' },
+        { id: 'pcv', label: 'Packed Cell Volume', type: 'number', placeholder: '44' },
+        { id: 'wc', label: 'White Blood Cell Count', type: 'number', placeholder: '7800' },
+        { id: 'rc', label: 'Red Blood Cell Count', type: 'number', placeholder: '5.2' }
+      ]
     }
   };
 
   const handleInputChange = (id, value) => {
-    setFormData(prev => ({ ...prev, [id]: parseFloat(value) || 0 }));
+    setFormData(prev => ({ ...prev, [id]: value }));
   };
 
   const runAnalysis = async () => {
@@ -134,7 +105,7 @@ const HealthMetricsAnalyzer = () => {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err.message || 'Connection to analysis server failed.');
+      setError(err.message || 'Connection to analysis server failed. Ensure backend is running.');
     } finally {
       setIsAnalyzing(false);
     }
