@@ -8,11 +8,12 @@ import {
   Clock,
   FileImage,
   Brain,
-  Heart,
-  Bone,
+  Eye,
+  Microscope,
   Zap,
   ShieldCheck,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react';
 import { Button } from './button';
 
@@ -22,6 +23,14 @@ const ImageAnalyzer = () => {
   const [analysisResults, setAnalysisResults] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedTask, setSelectedTask] = useState('brain_tumor');
+
+  const tasks = [
+    { id: 'brain_tumor', name: 'Brain Tumor (MRI)', icon: <Brain size={20} /> },
+    { id: 'breast_cancer', name: 'Breast Cancer (Histopathology)', icon: <Microscope size={20} /> },
+    { id: 'diabetic_retinopathy', name: 'Diabetic Retinopathy', icon: <Eye size={20} /> },
+    { id: 'skin_cancer', name: 'Skin Cancer', icon: <Activity size={20} /> }
+  ];
 
   const handleImageSelect = useCallback((file) => {
     if (file && file.type.startsWith('image/')) {
@@ -63,69 +72,86 @@ const ImageAnalyzer = () => {
       reader.onload = async (e) => {
         const base64Data = e.target.result;
 
-        await fetch('http://localhost:8003/analyze-base64', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: base64Data })
-        });
+        try {
+          const response = await fetch('http://localhost:8003/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              task: selectedTask,
+              image: base64Data 
+            })
+          });
 
-        await new Promise((r) => setTimeout(r, 2000));
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Analysis failed');
+          }
 
-        const mockResults = {
-          image_type: 'chest',
-          predictions: [
-            { label: 'Normal', score: 0.85 },
-            { label: 'Pneumonia', score: 0.12 },
-            { label: 'COVID-19', score: 0.02 },
-            { label: 'Tuberculosis', score: 0.01 }
-          ],
-          risk_assessment: 'Low Risk - Appears Normal',
-          recommendations: [
-            'Image appears normal, but regular check-ups are still recommended.',
-            'This AI analysis is for screening purposes only.',
-            'Schedule follow-up if symptoms persist.'
-          ],
-          confidence_summary: {
-            highest_confidence: 0.85,
-            average_confidence: 0.25,
-            total_predictions: 4
-          },
-          timestamp: new Date().toISOString()
-        };
+          const data = await response.json();
+          
+          // Transform API response to UI format
+          const formattedResults = {
+            task: data.task,
+            prediction: data.prediction,
+            confidence: data.confidence,
+            all_probabilities: Object.entries(data.all_probabilities).map(([label, score]) => ({
+              label,
+              score
+            })).sort((a, b) => b.score - a.score),
+            risk_assessment: data.confidence > 0.7 ? `High Confidence - ${data.prediction}` : `Moderate Confidence - ${data.prediction}`,
+            recommendations: getRecommendations(data.task, data.prediction),
+            timestamp: data.timestamp
+          };
 
-        setAnalysisResults(mockResults);
-        setIsAnalyzing(false);
+          setAnalysisResults(formattedResults);
+        } catch (err) {
+          setError(err.message || 'Connection to analysis server failed. Ensure backend is running.');
+        } finally {
+          setIsAnalyzing(false);
+        }
       };
 
       reader.readAsDataURL(selectedImage);
-    } catch {
-      setError('Analysis failed. Please try again.');
+    } catch (err) {
+      setError('Failed to process image. Please try again.');
       setIsAnalyzing(false);
     }
   };
 
-  const getImageTypeIcon = (type) => {
-    switch (type) {
-      case 'chest':
-        return <Heart />;
-      case 'brain':
-        return <Brain />;
-      case 'bone':
-        return <Bone />;
-      default:
-        return <FileImage />;
+  const getRecommendations = (task, prediction) => {
+    const baseRecs = [
+      'This AI analysis is for screening purposes only.',
+      'Always consult with a healthcare professional for official diagnosis.'
+    ];
+
+    if (prediction.toLowerCase().includes('no') || prediction.toLowerCase().includes('benign') || prediction.toLowerCase().includes('normal')) {
+      return [
+        'Image appears normal/benign, but regular check-ups are still recommended.',
+        ...baseRecs
+      ];
+    } else {
+      return [
+        'Potential abnormality detected. Please schedule a follow-up with a specialist immediately.',
+        'Further diagnostic tests (biopsy, additional scans) may be required.',
+        ...baseRecs
+      ];
     }
+  };
+
+  const getTaskIcon = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    return task ? task.icon : <FileImage />;
   };
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
         <div className="space-y-3">
-          <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Image Analyze</h2>
-          <p className="text-gray-500 font-medium text-xl leading-relaxed">"Seeing is believing." — Advanced AI screening for Chest, Brain, and Bone scans.</p>
+          <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">Medical Image Analyzer</h2>
+          <p className="text-gray-500 font-medium text-xl leading-relaxed">Advanced AI screening for Brain, Breast, Eye, and Skin conditions.</p>
         </div>
-        <div className="flex items-center gap-3 px-6 py-3 bg-warning-50 text-warning-700 rounded-4xl text-xs font-black border border-warning-100 shadow-sm shadow-warning-50">
-          <AlertTriangle size={20} className="text-warning-500" />
+        <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 text-amber-700 rounded-4xl text-xs font-black border border-amber-100 shadow-sm">
+          <AlertTriangle size={20} className="text-amber-500" />
           Research Use Only
         </div>
       </header>
@@ -142,6 +168,29 @@ const ImageAnalyzer = () => {
             <div>
               <h3 className="text-2xl font-black text-gray-900 tracking-tight">Visual Input</h3>
               <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Diagnostic Upload Portal</p>
+            </div>
+          </div>
+
+          {/* TASK SELECTION */}
+          <div className="relative z-10 space-y-4">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Select Analysis Task</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {tasks.map((task) => (
+                <button
+                  key={task.id}
+                  onClick={() => setSelectedTask(task.id)}
+                  className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-300 text-left ${
+                    selectedTask === task.id 
+                    ? 'border-primary-500 bg-primary-50 text-primary-900 shadow-md' 
+                    : 'border-gray-100 bg-gray-50 text-gray-500 hover:border-primary-200'
+                  }`}
+                >
+                  <div className={`${selectedTask === task.id ? 'text-primary-600' : 'text-gray-400'}`}>
+                    {task.icon}
+                  </div>
+                  <span className="text-sm font-bold">{task.name}</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -197,7 +246,7 @@ const ImageAnalyzer = () => {
           </Button>
 
           {error && (
-            <div className="p-6 bg-danger-50 text-danger-600 rounded-4xl border border-danger-100 flex items-center gap-5 text-xs font-black uppercase tracking-widest animate-in shake duration-300 relative z-10">
+            <div className="p-6 bg-red-50 text-red-600 rounded-4xl border border-red-100 flex items-center gap-5 text-xs font-black uppercase tracking-widest animate-in shake duration-300 relative z-10">
               <AlertTriangle size={24} className="shrink-0" />
               {error}
             </div>
@@ -206,10 +255,10 @@ const ImageAnalyzer = () => {
 
         {/* RESULTS SECTION */}
         <section className="bg-white p-12 rounded-[3rem] shadow-xl shadow-gray-200/40 border border-gray-100 space-y-10 flex flex-col relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-secondary-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
           
           <div className="flex items-center gap-5 relative z-10">
-            <div className="w-16 h-16 bg-secondary-50 text-secondary-600 rounded-2xl flex items-center justify-center shadow-sm">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
               <Activity size={32} />
             </div>
             <div>
@@ -231,11 +280,11 @@ const ImageAnalyzer = () => {
               <div className="flex items-center justify-between p-8 bg-primary-50 rounded-[2.5rem] border border-primary-100 shadow-inner">
                 <div className="flex items-center gap-6">
                   <div className="w-16 h-16 bg-white text-primary-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:rotate-6 transition-transform">
-                    {getImageTypeIcon(analysisResults.image_type)}
+                    {getTaskIcon(analysisResults.task)}
                   </div>
                   <div>
                     <p className="text-[10px] text-primary-400 font-black uppercase tracking-[0.3em] mb-1">Detected Target</p>
-                    <p className="text-2xl font-black text-primary-900 capitalize tracking-tighter">{analysisResults.image_type} Region</p>
+                    <p className="text-2xl font-black text-primary-900 capitalize tracking-tighter">{analysisResults.task.replace('_', ' ')}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -247,15 +296,15 @@ const ImageAnalyzer = () => {
               <div className="space-y-6">
                 <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] ml-4">Probability Analysis</h4>
                 <div className="grid grid-cols-1 gap-6">
-                  {analysisResults.predictions.map((p, i) => (
+                  {analysisResults.all_probabilities.map((p, i) => (
                     <div key={i} className="space-y-3">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                         <span className="text-gray-700">{p.label}</span>
-                        <span className={p.score > 0.7 ? 'text-success-600' : 'text-gray-400'}>{(p.score * 100).toFixed(1)}% Confidence</span>
+                        <span className={p.score > 0.7 ? 'text-emerald-600' : 'text-gray-400'}>{(p.score * 100).toFixed(1)}% Confidence</span>
                       </div>
                       <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden shadow-inner">
                         <div 
-                          className={`h-full transition-all duration-1000 ${p.score > 0.7 ? 'bg-success-500 shadow-[0_0_12px_rgba(34,197,94,0.6)]' : 'bg-primary-500'}`} 
+                          className={`h-full transition-all duration-1000 ${p.score > 0.7 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-primary-500'}`} 
                           style={{ width: `${p.score * 100}%` }}
                         ></div>
                       </div>
@@ -279,7 +328,7 @@ const ImageAnalyzer = () => {
               <div className="grid grid-cols-2 gap-8">
                 <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 shadow-sm">
                   <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mb-2">Max Confidence</p>
-                  <p className="text-3xl font-black text-gray-900 tracking-tighter">{(analysisResults.confidence_summary.highest_confidence * 100).toFixed(1)}%</p>
+                  <p className="text-3xl font-black text-gray-900 tracking-tighter">{(analysisResults.confidence * 100).toFixed(1)}%</p>
                 </div>
                 <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 shadow-sm">
                   <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] mb-2">Scan Identity</p>
@@ -294,7 +343,7 @@ const ImageAnalyzer = () => {
       <footer className="p-10 bg-gray-900 text-white rounded-[3rem] shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-1000"></div>
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-          <div className="p-5 bg-white/10 rounded-4xl text-warning-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
+          <div className="p-5 bg-white/10 rounded-4xl text-amber-400 border border-white/10 shadow-inner group-hover:rotate-12 transition-transform">
             <ShieldCheck size={32} />
           </div>
           <div>
