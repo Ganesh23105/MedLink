@@ -32,8 +32,6 @@ pytest_cache/
 
 # OCR / Temp Files
 *.png
-*.jpg
-*.jpeg
 *.tiff
 *.bmp
 temp/
